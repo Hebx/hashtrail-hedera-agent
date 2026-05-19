@@ -1,0 +1,14 @@
+title = "HashTrail gitleaks config"
+
+[allowlist]
+description = "Allow placeholders in committed examples and docs"
+paths = [
+  '''\.env\.example$''',
+  '''README\.md$''',
+  '''submission/.*\.md$'''
+]
+regexes = [
+  '''REPLACE_ME''',
+  '''0\.0\.xxxxx''',
+  '''OPENAI_API_KEY=REPLACE_ME'''
+]

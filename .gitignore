@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.vitest-temp/
+.DS_Store
+.env
+.env.*
+!.env.example
+.local-plans/

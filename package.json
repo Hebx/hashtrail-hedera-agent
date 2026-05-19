@@ -1,0 +1,44 @@
+{
+  "name": "hashtrail-hedera-agent",
+  "version": "0.1.0",
+  "description": "HashTrail, a Hedera Bounty 1 receipt-postcard agent.",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "bin": {
+    "hashtrail": "./dist/cli.js"
+  },
+  "scripts": {
+    "clean": "rm -rf dist coverage .vitest-temp",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest",
+    "demo": "tsx src/cli.ts \"make me a hashtrail postcard\"",
+    "hashtrail": "tsx src/cli.ts",
+    "secrets:scan": "gitleaks detect --no-banner --source ."
+  },
+  "dependencies": {
+    "@hashgraph/hedera-agent-kit": "4.0.0",
+    "@hashgraph/hedera-agent-kit-langchain": "1.0.0",
+    "@hiero-ledger/sdk": "^2.81.0",
+    "@langchain/openai": "^1.1.2",
+    "dotenv": "^16.4.7",
+    "langchain": "1.2.24",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.39.1",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
