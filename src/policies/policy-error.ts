@@ -1,13 +1,13 @@
-export type PolicyErrorCode = 'policy-denied';
+export type PolicyErrorCode = "policy-denied";
 
 export class PolicyDeniedError extends Error {
-  readonly code: PolicyErrorCode = 'policy-denied';
+  readonly code: PolicyErrorCode = "policy-denied";
   readonly reason: string;
   readonly reasonHash: string;
 
   constructor(reason: string, reasonHash: string) {
     super(`policy-denied:${reason}`);
-    this.name = 'PolicyDeniedError';
+    this.name = "PolicyDeniedError";
     this.reason = reason;
     this.reasonHash = reasonHash;
   }

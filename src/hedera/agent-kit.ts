@@ -7,8 +7,8 @@ import {
   type PostParamsNormalizationParams,
   type PostSecondaryActionParams,
   type PreToolExecutionParams,
-} from '@hashgraph/hedera-agent-kit';
-import { HederaLangchainToolkit } from '@hashgraph/hedera-agent-kit-langchain';
+} from "@hashgraph/hedera-agent-kit";
+import { HederaLangchainToolkit } from "@hashgraph/hedera-agent-kit-langchain";
 import {
   coreAccountQueryPlugin,
   coreConsensusPlugin,
@@ -17,13 +17,13 @@ import {
   coreTokenPluginToolNames,
   TRANSFER_HBAR_TOOL,
   TRANSFER_HBAR_WITH_ALLOWANCE_TOOL,
-} from '@hashgraph/hedera-agent-kit/plugins';
-import type { Client } from '@hiero-ledger/sdk';
+} from "@hashgraph/hedera-agent-kit/plugins";
+import type { Client } from "@hiero-ledger/sdk";
 
-import { makeAuditLogLine } from '../policies/audit-log.js';
-import { enforceHbarCap } from '../policies/hbar-cap.js';
-import { enforceMintAllowlist } from '../policies/allowlist.js';
-import type { HashTrailEnv } from '../shared/types.js';
+import { makeAuditLogLine } from "../policies/audit-log.js";
+import { enforceHbarCap } from "../policies/hbar-cap.js";
+import { enforceMintAllowlist } from "../policies/allowlist.js";
+import type { HashTrailEnv } from "../shared/types.js";
 
 export const hashTrailPlugins: Plugin[] = [
   coreAccountQueryPlugin,
@@ -33,8 +33,8 @@ export const hashTrailPlugins: Plugin[] = [
 ];
 
 class HashTrailMintAllowlistPolicy extends AbstractPolicy {
-  name = 'HashTrail Mint Allowlist Policy';
-  description = 'Denies token create/mint tools unless WEEK1_ALLOW_MINT=true.';
+  name = "HashTrail Mint Allowlist Policy";
+  description = "Denies token create/mint tools unless WEEK1_ALLOW_MINT=true.";
   relevantTools = [
     coreTokenPluginToolNames.CREATE_FUNGIBLE_TOKEN_TOOL,
     coreTokenPluginToolNames.MINT_FUNGIBLE_TOKEN_TOOL,
@@ -60,8 +60,8 @@ class HashTrailMintAllowlistPolicy extends AbstractPolicy {
 }
 
 class HashTrailHbarCapPolicy extends AbstractPolicy {
-  name = 'HashTrail HBAR Cap Policy';
-  description = 'Denies normalized HBAR amounts above one HBAR.';
+  name = "HashTrail HBAR Cap Policy";
+  description = "Denies normalized HBAR amounts above one HBAR.";
   relevantTools = [TRANSFER_HBAR_TOOL, TRANSFER_HBAR_WITH_ALLOWANCE_TOOL];
 
   protected override shouldBlockPostParamsNormalization(
@@ -77,8 +77,8 @@ class HashTrailHbarCapPolicy extends AbstractPolicy {
 }
 
 class HashTrailAuditLogHook extends AbstractHook {
-  name = 'HashTrail Audit Log Hook';
-  description = 'Emits a structured JSON audit line after tool execution.';
+  name = "HashTrail Audit Log Hook";
+  description = "Emits a structured JSON audit line after tool execution.";
   relevantTools = [
     TRANSFER_HBAR_TOOL,
     TRANSFER_HBAR_WITH_ALLOWANCE_TOOL,
@@ -96,7 +96,7 @@ class HashTrailAuditLogHook extends AbstractHook {
       `${makeAuditLogLine({
         correlationId: `${method}-${Date.now()}`,
         tool: method,
-        status: 'ok',
+        status: "ok",
         txId: extractTransactionId(params.toolResult),
       })}\n`,
     );
@@ -104,20 +104,22 @@ class HashTrailAuditLogHook extends AbstractHook {
 }
 
 function extractTransactionId(value: unknown): string | undefined {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const match = value.match(/\b\d+\.\d+\.\d+@\d+\.\d+\b/);
     return match?.[0];
   }
 
-  if (typeof value === 'object' && value !== null && 'transactionId' in value) {
+  if (typeof value === "object" && value !== null && "transactionId" in value) {
     const tx = (value as { transactionId?: unknown }).transactionId;
-    return typeof tx === 'string' ? tx : undefined;
+    return typeof tx === "string" ? tx : undefined;
   }
 
   return undefined;
 }
 
-export function buildHashTrailHakConfiguration(env: HashTrailEnv): Configuration {
+export function buildHashTrailHakConfiguration(
+  env: HashTrailEnv,
+): Configuration {
   return {
     plugins: hashTrailPlugins,
     context: {

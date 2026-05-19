@@ -61,17 +61,34 @@ The mint command declines unless `WEEK1_ALLOW_MINT=true`.
 
 ## Live Testnet Mode
 
-Live mode is intentionally guarded. Set real testnet credentials in `.env`:
+Live mode is intentionally guarded. Set real testnet credentials in `.env`.
+For the deterministic CLI path, set `HBL_LLM_PROVIDER=none`; no LLM call is
+needed to check balance, write a postcard, or read HCS messages.
 
 ```dotenv
 HBL_LIVE=1
 HEDERA_NETWORK=testnet
 HEDERA_OPERATOR_ID=0.0.xxxxx
 HEDERA_OPERATOR_KEY=REPLACE_ME
-OPENAI_API_KEY=REPLACE_ME
+HEDERA_MIRROR_NODE_URL=https://testnet.mirrornode.hedera.com
+HBL_LLM_PROVIDER=none
+HASHTRAIL_HCS_TOPIC_ID=
 ```
 
 Do not use mainnet credentials. Do not commit `.env`.
+
+On first live postcard creation, HashTrail creates an HCS topic and prints:
+
+```text
+Pin this topic in .env as HASHTRAIL_HCS_TOPIC_ID=<topicId>
+```
+
+After pinning, read-only commands reuse the topic and do not submit a new
+message:
+
+```bash
+npm run hashtrail -- "check my balance and read the last 3 postcards"
+```
 
 ## Verification
 
