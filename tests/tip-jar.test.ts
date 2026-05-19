@@ -2,9 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import { parseTipIntent } from "../src/agent/tip-jar.js";
 import {
+  listRecipientEntries,
   parseAddressBookIntent,
   registryFromAddressBookReceipts,
+  removeRecipientAlias,
   resolveRecipient,
+  upsertRecipient,
 } from "../src/agent/recipients.js";
 
 describe("parseTipIntent", () => {
@@ -76,6 +79,50 @@ describe("resolveRecipient", () => {
 
   test("returns null for unknown aliases", () => {
     expect(resolveRecipient({ kind: "alias", value: "bob" }, registry)).toBeNull();
+  });
+});
+
+describe("local address book helpers", () => {
+  test("upserts, lists, and removes local recipients", () => {
+    const registry = upsertRecipient({
+      registry: {},
+      alias: "Alice",
+      accountId: "0.0.9007632",
+      note: "demo builder",
+    });
+
+    expect(registry.alice).toEqual({
+      accountId: "0.0.9007632",
+      note: "demo builder",
+    });
+    expect(listRecipientEntries(registry)).toEqual([
+      {
+        alias: "alice",
+        accountId: "0.0.9007632",
+        note: "demo builder",
+      },
+    ]);
+
+    const removed = removeRecipientAlias({ registry, alias: "alice" });
+    expect(removed.removed).toBe(true);
+    expect(removed.registry.alice).toBeUndefined();
+  });
+
+  test("rejects invalid local address book entries", () => {
+    expect(() =>
+      upsertRecipient({
+        registry: {},
+        alias: "not allowed!",
+        accountId: "0.0.9007632",
+      }),
+    ).toThrow(/Recipient alias/);
+    expect(() =>
+      upsertRecipient({
+        registry: {},
+        alias: "alice",
+        accountId: "9007632",
+      }),
+    ).toThrow(/account id/);
   });
 });
 

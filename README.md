@@ -18,7 +18,8 @@ wallet internals, token standards, or consensus services during a live demo.
 They type:
 
 ```bash
-npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
+npm run hashtrail -- recipients create alice --note "demo recipient"
+npm run hashtrail -- recipients publish alice
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
@@ -63,6 +64,32 @@ HashTrail turns that workflow into a lightweight proof trail:
 
 This is intentionally modest. It is not a payroll system or a DAO treasury. It is
 a clear first agent: AI intent in, Hedera receipts out.
+
+## HashTrail Address Book
+
+`recipients.json` is no longer something users have to edit by hand. HashTrail
+has an address-book workflow for friendly contributor names:
+
+```bash
+npm run hashtrail -- recipients create alice --note "demo builder"
+npm run hashtrail -- recipients add alice 0.0.9007632 --note "demo builder"
+npm run hashtrail -- recipients list
+npm run hashtrail -- recipients show alice
+npm run hashtrail -- recipients publish alice
+```
+
+There are three layers:
+
+- **Local address book:** stores friendly names in gitignored `recipients.json`.
+- **Testnet onboarding:** `recipients create alice` creates a fresh Hedera
+  testnet account with automatic token associations and keeps the private key in
+  `.local/recipients/alice.json`.
+- **Public registry receipt:** `recipients publish alice` writes a
+  `hashtrail.address-book.v1` HCS message, so the alias can be verified from the
+  same public trail as postcards and tip receipts.
+
+After publishing, the tip command can use `alice` instead of a raw Hedera account
+id.
 
 ## What The Live Demo Proves
 
@@ -157,6 +184,8 @@ data.
 npm run hashtrail -- "make me a hashtrail postcard"
 npm run hashtrail -- "check my balance and read the last 3 postcards"
 npm run hashtrail -- "mint the tiny fun token"
+npm run hashtrail -- recipients create alice --note "demo recipient"
+npm run hashtrail -- recipients publish alice
 npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
@@ -220,13 +249,20 @@ Pin this token in .env as HASHTRAIL_HTS_TOKEN_ID=<tokenId>
 To run the guarded tip jar:
 
 ```bash
-npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
+npm run hashtrail -- recipients create alice --note "demo recipient"
+npm run hashtrail -- recipients publish alice
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
-The recipient may be a raw `0.0.x` account id or an alias registered on HCS.
-The registry command writes a `hashtrail.address-book.v1` receipt to the same
-topic used for postcards and tip receipts. That makes the demo address book
+The recipient may also be a raw `0.0.x` account id or an alias registered with
+natural language:
+
+```bash
+npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
+```
+
+The publish/register command writes a `hashtrail.address-book.v1` receipt to the
+same topic used for postcards and tip receipts. That makes the demo address book
 inspectable on HashScan and replayable from mirror-node history.
 
 `recipients.json` is still supported as a local bootstrap fallback:
