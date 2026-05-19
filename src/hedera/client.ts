@@ -20,10 +20,6 @@ export function buildHederaClient(env: HashTrailEnv): Client {
     throw new Error("HashTrail only supports Hedera testnet");
   }
 
-  if (env.mode !== "live") {
-    throw new Error("Cannot create a Hedera client in mock mode");
-  }
-
   if (!env.hederaOperatorId || !env.hederaOperatorKey) {
     throw new Error("HEDERA_OPERATOR_ID and HEDERA_OPERATOR_KEY are required");
   }

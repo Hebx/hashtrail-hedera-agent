@@ -21,7 +21,7 @@ function requireLiveValue(
 ): string {
   const value = read(input, key, includeProcessEnv);
   if (!value || PLACEHOLDER_VALUES.has(value)) {
-    throw new Error(`${key} is required when HBL_LIVE=1`);
+    throw new Error(`${key} is required for Hedera testnet execution`);
   }
   return value;
 }
@@ -43,24 +43,19 @@ export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
     throw new Error(`HEDERA_NETWORK must be testnet, received ${network}`);
   }
 
-  const mode =
-    read(input, "HBL_LIVE", includeProcessEnv) === "1" ? "live" : "mock";
   const llmProvider =
     read(input, "HBL_LLM_PROVIDER", includeProcessEnv) ?? "openai";
 
-  if (mode === "live") {
-    requireLiveValue(input, "HEDERA_OPERATOR_ID", includeProcessEnv);
-    requireLiveValue(input, "HEDERA_OPERATOR_KEY", includeProcessEnv);
-    if (llmProvider === "openai") {
-      requireLiveValue(input, "OPENAI_API_KEY", includeProcessEnv);
-    }
-    if (llmProvider === "gemini") {
-      requireLiveValue(input, "GEMINI_API_KEY", includeProcessEnv);
-    }
+  requireLiveValue(input, "HEDERA_OPERATOR_ID", includeProcessEnv);
+  requireLiveValue(input, "HEDERA_OPERATOR_KEY", includeProcessEnv);
+  if (llmProvider === "openai") {
+    requireLiveValue(input, "OPENAI_API_KEY", includeProcessEnv);
+  }
+  if (llmProvider === "gemini") {
+    requireLiveValue(input, "GEMINI_API_KEY", includeProcessEnv);
   }
 
   return {
-    mode,
     hederaNetwork: "testnet",
     hederaOperatorId: read(input, "HEDERA_OPERATOR_ID", includeProcessEnv),
     hederaOperatorKey: read(input, "HEDERA_OPERATOR_KEY", includeProcessEnv),

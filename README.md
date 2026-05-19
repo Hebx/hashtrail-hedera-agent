@@ -105,9 +105,11 @@ uses:
 
 HashTrail is designed to be demo-friendly and hard to misuse:
 
-- Testnet only. `HEDERA_NETWORK=mainnet` throws.
-- Mock-first. `HBL_LIVE=0` runs without credentials or network calls.
-- Gemini 2.5 Flash is supported for live LLM mode, but deterministic
+- Testnet-only today. `HEDERA_NETWORK=mainnet` throws until a future mainnet
+  release explicitly enables it.
+- Real Hedera credentials are required; HashTrail does not ship a simulated
+  execution mode.
+- Gemini 2.5 Flash is supported for LLM mode, but deterministic
   `HBL_LLM_PROVIDER=none` works without any LLM key.
 - Minting is disabled unless `WEEK1_ALLOW_MINT=true`.
 - HBAR tips are disabled unless `WEEK1_ALLOW_TIP=true`.
@@ -133,7 +135,7 @@ The Agent Kit boundary is in `src/hedera/agent-kit.ts`. It wires three controls:
 - `HashTrailAuditLogHook`: emits structured JSON audit lines after tool
   execution.
 
-Live chat-model wiring supports Gemini 2.5 Flash through LangChain's
+Chat-model wiring supports Gemini 2.5 Flash through LangChain's
 `ChatGoogle` adapter. The deterministic path remains available with
 `HBL_LLM_PROVIDER=none` for demos that should avoid LLM quota entirely.
 
@@ -142,15 +144,11 @@ Live chat-model wiring supports Gemini 2.5 Flash through LangChain's
 ```bash
 npm install
 cp .env.example .env
-npm run demo
 ```
 
-Expected mock output includes:
-
-- `mode=mock`
-- `topicId=0.0.424242`
-- a `hashtrail.postcard.v1` payload
-- a latest-messages readback section
+Fill `.env` with a Hedera testnet operator account before running commands.
+HashTrail intentionally executes against Hedera testnet instead of local sample
+data.
 
 ## Commands
 
@@ -167,15 +165,14 @@ The tip command declines unless `WEEK1_ALLOW_TIP=true`; aliases resolve from
 `hashtrail.address-book.v1` HCS receipts first, then local `recipients.json` as
 a bootstrap fallback.
 
-## Live Testnet Mode
+## Testnet Mode
 
-Live mode is intentionally guarded. Set real testnet credentials in `.env`.
-Gemini 2.5 Flash is the default live model. For the deterministic CLI path, set
+Testnet execution is intentionally guarded. Set real testnet credentials in
+`.env`. Gemini 2.5 Flash is the default model. For the deterministic CLI path, set
 `HBL_LLM_PROVIDER=none`; no LLM call is needed to check balance, write a
 postcard, run the parsed tip command, or read HCS messages.
 
 ```dotenv
-HBL_LIVE=1
 HEDERA_NETWORK=testnet
 HEDERA_OPERATOR_ID=0.0.xxxxx
 HEDERA_OPERATOR_KEY=REPLACE_ME

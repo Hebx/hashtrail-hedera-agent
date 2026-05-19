@@ -1,7 +1,4 @@
-export type RuntimeMode = "mock" | "live";
-
 export type HashTrailEnv = {
-  mode: RuntimeMode;
   hederaNetwork: "testnet";
   hederaOperatorId?: string;
   hederaOperatorKey?: string;
@@ -30,7 +27,7 @@ export type HashTrailPostcard = {
 
 export type HashTrailResult = {
   status: "ok" | "denied";
-  mode: RuntimeMode;
+  mode: "live";
   topicId: string;
   balance: string;
   postcard: HashTrailPostcard;

@@ -118,9 +118,6 @@ function findFirst(pattern: RegExp, text: string): string | undefined {
 
 async function main(): Promise<void> {
   const env = loadEnv();
-  if (env.mode !== "live") {
-    throw new Error("demo transcript requires HBL_LIVE=1");
-  }
   const recipients = loadRecipientRegistry();
   const demoRecipient = recipients.alice;
   if (!demoRecipient) {

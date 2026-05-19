@@ -4,7 +4,6 @@ import { runLiveHashTrailAgent } from "../src/agent/hashtrail-agent.js";
 import { loadEnv } from "../src/shared/env.js";
 
 const baseLiveEnv = {
-  HBL_LIVE: "1",
   HEDERA_OPERATOR_ID: "0.0.123",
   HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
   HBL_LLM_PROVIDER: "none",

@@ -1,4 +1,3 @@
-import { runMockHashTrailAgent } from "./mock-hashtrail-agent.js";
 import { buildHederaClient } from "../hedera/client.js";
 import { createLiveHcsBoundary, type HcsLiveBoundary } from "../hedera/hcs.js";
 import {
@@ -360,10 +359,6 @@ export async function runHashTrailAgent(input: {
   env: HashTrailEnv;
   recipients?: RecipientRegistry;
 }): Promise<HashTrailResult> {
-  if (input.env.mode === "mock") {
-    return runMockHashTrailAgent(input);
-  }
-
   const client = buildHederaClient(input.env);
   try {
     return await runLiveHashTrailAgent({

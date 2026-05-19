@@ -7,7 +7,6 @@ describe("runLiveHashTrailAgent", () => {
   test("checks balance, submits a postcard, and reads HCS messages through live boundaries", async () => {
     const submitted: string[] = [];
     const env = loadEnv({
-      HBL_LIVE: "1",
       HEDERA_OPERATOR_ID: "0.0.123",
       HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
       HBL_LLM_PROVIDER: "none",
@@ -56,7 +55,6 @@ describe("runLiveHashTrailAgent", () => {
 
   test("keeps minting denied in live mode when WEEK1_ALLOW_MINT is false", async () => {
     const env = loadEnv({
-      HBL_LIVE: "1",
       HEDERA_OPERATOR_ID: "0.0.123",
       HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
       HBL_LLM_PROVIDER: "none",
@@ -86,7 +84,6 @@ describe("runLiveHashTrailAgent", () => {
 
   test("mints one HTS fun token when minting is explicitly approved", async () => {
     const env = loadEnv({
-      HBL_LIVE: "1",
       HEDERA_OPERATOR_ID: "0.0.123",
       HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
       HBL_LLM_PROVIDER: "none",
@@ -136,7 +133,6 @@ describe("runLiveHashTrailAgent", () => {
 
   test("tells the operator to pin a newly created HCS topic", async () => {
     const env = loadEnv({
-      HBL_LIVE: "1",
       HEDERA_OPERATOR_ID: "0.0.123",
       HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
       HBL_LLM_PROVIDER: "none",
@@ -165,7 +161,6 @@ describe("runLiveHashTrailAgent", () => {
   test("waits briefly for mirror readback after submitting a live postcard", async () => {
     let readAttempts = 0;
     const env = loadEnv({
-      HBL_LIVE: "1",
       HEDERA_OPERATOR_ID: "0.0.123",
       HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
       HBL_LLM_PROVIDER: "none",
@@ -207,7 +202,6 @@ describe("runLiveHashTrailAgent", () => {
   test("checks balance and reads postcards without submitting when the request is read-only", async () => {
     let submitCalls = 0;
     const env = loadEnv({
-      HBL_LIVE: "1",
       HEDERA_OPERATOR_ID: "0.0.123",
       HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
       HBL_LLM_PROVIDER: "none",

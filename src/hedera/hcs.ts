@@ -28,29 +28,6 @@ export type HcsLiveBoundary = {
   readLatestRaw?: (topicId: string, limit: number) => Promise<unknown[]>;
 };
 
-export function createUnimplementedHcsBoundary(): HcsLiveBoundary {
-  return {
-    ensureTopic: async () => {
-      throw new Error("Live HCS topic creation is not enabled in mock mode");
-    },
-    submitPostcard: async () => {
-      throw new Error("Live HCS submission is not enabled in mock mode");
-    },
-    submitTipReceipt: async () => {
-      throw new Error("Live HCS tip receipt submission is not enabled in mock mode");
-    },
-    submitAddressBookReceipt: async () => {
-      throw new Error("Live HCS address-book receipt submission is not enabled in mock mode");
-    },
-    readLatest: async () => {
-      throw new Error("Live HCS query is not enabled in mock mode");
-    },
-    readLatestRaw: async () => {
-      throw new Error("Live HCS raw query is not enabled in mock mode");
-    },
-  };
-}
-
 export function createLiveHcsBoundary(input: {
   client: Client;
   env: HashTrailEnv;
