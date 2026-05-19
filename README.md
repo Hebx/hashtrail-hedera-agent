@@ -30,6 +30,7 @@ The Agent Kit v4 boundary is in `src/hedera/agent-kit.ts`. It wires three contro
 - Testnet only. `HEDERA_NETWORK=mainnet` throws.
 - Mock-first. `HBL_LIVE=0` makes the demo run without credentials or network calls.
 - Minting is disabled by default.
+- When `WEEK1_ALLOW_MINT=true`, minting is bounded to one `HTFUN` token per command.
 - The system prompt forbids HBAR transfers.
 - Transfer-capable tools are covered by a 1 HBAR post-normalization cap.
 - `.env*` is ignored; only `.env.example` is committed.
@@ -73,6 +74,8 @@ HEDERA_OPERATOR_KEY=REPLACE_ME
 HEDERA_MIRROR_NODE_URL=https://testnet.mirrornode.hedera.com
 HBL_LLM_PROVIDER=none
 HASHTRAIL_HCS_TOPIC_ID=
+HASHTRAIL_HTS_TOKEN_ID=
+WEEK1_ALLOW_MINT=true
 ```
 
 Do not use mainnet credentials. Do not commit `.env`.
@@ -88,6 +91,19 @@ message:
 
 ```bash
 npm run hashtrail -- "check my balance and read the last 3 postcards"
+```
+
+To include the optional HTS proof step:
+
+```bash
+npm run hashtrail -- "mint the tiny fun token"
+```
+
+If no token id is pinned yet, HashTrail creates a bounded `HTFUN` token and
+prints:
+
+```text
+Pin this token in .env as HASHTRAIL_HTS_TOKEN_ID=<tokenId>
 ```
 
 ## Verification

@@ -11,6 +11,7 @@ export type HashTrailEnv = {
   openAiApiKey?: string;
   displayName: string;
   hcsTopicId?: string;
+  htsTokenId?: string;
   allowMint: boolean;
 };
 
@@ -30,5 +31,19 @@ export type HashTrailResult = {
   balance: string;
   postcard: HashTrailPostcard;
   latestMessages: HashTrailPostcard[];
+  htsMint?: HtsMintReceipt;
   summary: string;
+};
+
+export type HtsTokenReceipt = {
+  tokenId: string;
+  transactionId?: string;
+  created: boolean;
+};
+
+export type HtsMintReceipt = {
+  tokenId: string;
+  amount: number;
+  transactionId?: string;
+  totalSupply?: string;
 };

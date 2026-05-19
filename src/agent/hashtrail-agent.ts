@@ -1,6 +1,11 @@
 import { runMockHashTrailAgent } from "./mock-hashtrail-agent.js";
 import { buildHederaClient } from "../hedera/client.js";
 import { createLiveHcsBoundary, type HcsLiveBoundary } from "../hedera/hcs.js";
+import {
+  createLiveHtsBoundary,
+  HASHTRAIL_FUN_TOKEN,
+  type HtsLiveBoundary,
+} from "../hedera/token.js";
 import { enforceMintAllowlist } from "../policies/allowlist.js";
 import type {
   HashTrailEnv,
@@ -12,6 +17,7 @@ import { AccountBalanceQuery, type Client } from "@hiero-ledger/sdk";
 export type HashTrailLiveBoundaries = {
   getBalance: () => Promise<string>;
   hcs: HcsLiveBoundary;
+  hts?: HtsLiveBoundary;
 };
 
 function wantsMint(input: string): boolean {
@@ -84,6 +90,33 @@ export async function runLiveHashTrailAgent(input: {
             : "Mint request declined: mint-not-allowed",
       };
     }
+
+    if (!input.boundaries.hts) {
+      throw new Error("HTS live boundary is required when minting is approved");
+    }
+
+    const token = await input.boundaries.hts.ensureToken();
+    const mint = await input.boundaries.hts.mintTinyToken(token.tokenId);
+    const receipt = await input.boundaries.hcs.submitPostcard(postcard);
+    const latestMessages = await readLatestWithRetry({
+      ...input,
+      topicId: receipt.topicId,
+    });
+    const pinToken =
+      token.created && !input.env.htsTokenId
+        ? ` Pin this token in .env as HASHTRAIL_HTS_TOKEN_ID=${token.tokenId}`
+        : "";
+
+    return {
+      status: "ok",
+      mode: "live",
+      topicId: receipt.topicId,
+      balance,
+      postcard,
+      latestMessages,
+      htsMint: mint,
+      summary: `HashTrail minted ${mint.amount} ${HASHTRAIL_FUN_TOKEN.symbol} on Hedera testnet token=${mint.tokenId}${mint.transactionId ? ` tx=${mint.transactionId}` : ""}${pinToken}`,
+    };
   }
 
   if (!wantsPostcardWrite(input.input)) {
@@ -160,6 +193,7 @@ export async function runHashTrailAgent(input: {
       boundaries: {
         getBalance: () => getOperatorBalance({ client, env: input.env }),
         hcs: createLiveHcsBoundary({ client, env: input.env }),
+        hts: createLiveHtsBoundary({ client, env: input.env }),
       },
     });
   } finally {

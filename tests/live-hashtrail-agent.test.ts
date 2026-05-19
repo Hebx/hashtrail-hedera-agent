@@ -84,6 +84,56 @@ describe("runLiveHashTrailAgent", () => {
     expect(result.summary).toContain("mint-not-allowed");
   });
 
+  test("mints one HTS fun token when minting is explicitly approved", async () => {
+    const env = loadEnv({
+      HBL_LIVE: "1",
+      HEDERA_OPERATOR_ID: "0.0.123",
+      HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
+      HBL_LLM_PROVIDER: "none",
+      WEEK1_ALLOW_MINT: "true",
+      HASHTRAIL_HCS_TOPIC_ID: "0.0.777",
+      HASHTRAIL_HTS_TOKEN_ID: "",
+    });
+
+    const result = await runLiveHashTrailAgent({
+      input: "mint the tiny fun token",
+      env,
+      readbackAttempts: 1,
+      boundaries: {
+        getBalance: async () => "1.00000000 HBAR",
+        hcs: {
+          ensureTopic: async () => "0.0.777",
+          submitPostcard: async () => ({
+            topicId: "0.0.777",
+            sequenceNumber: 10,
+          }),
+          readLatest: async () => [],
+        },
+        hts: {
+          ensureToken: async () => ({
+            tokenId: "0.0.888",
+            transactionId: "0.0.123@1710000001.000000001",
+            created: true,
+          }),
+          mintTinyToken: async () => ({
+            tokenId: "0.0.888",
+            amount: 1,
+            transactionId: "0.0.123@1710000002.000000001",
+            totalSupply: "1",
+          }),
+        },
+      },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(result.htsMint?.tokenId).toBe("0.0.888");
+    expect(result.htsMint?.amount).toBe(1);
+    expect(result.summary).toContain("minted 1 HTFUN");
+    expect(result.summary).toContain(
+      "Pin this token in .env as HASHTRAIL_HTS_TOKEN_ID=0.0.888",
+    );
+  });
+
   test("tells the operator to pin a newly created HCS topic", async () => {
     const env = loadEnv({
       HBL_LIVE: "1",

@@ -41,7 +41,14 @@ describe("loadEnv", () => {
         HEDERA_OPERATOR_ID: "0.0.123",
         HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
         HBL_LLM_PROVIDER: "none",
+        HASHTRAIL_HTS_TOKEN_ID: "0.0.456",
       }).mode,
     ).toBe("live");
+
+    expect(
+      loadEnv({
+        HASHTRAIL_HTS_TOKEN_ID: "0.0.456",
+      }).htsTokenId,
+    ).toBe("0.0.456");
   });
 });
