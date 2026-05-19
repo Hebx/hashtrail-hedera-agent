@@ -17,7 +17,8 @@
     "test": "vitest",
     "demo": "tsx src/cli.ts \"make me a hashtrail postcard\"",
     "hashtrail": "tsx src/cli.ts",
-    "secrets:scan": "gitleaks detect --no-banner --source ."
+    "secrets:scan": "gitleaks detect --no-banner --source .",
+    "demo:transcript": "tsx src/demo-transcript.ts"
   },
   "dependencies": {
     "@hashgraph/hedera-agent-kit": "4.0.0",

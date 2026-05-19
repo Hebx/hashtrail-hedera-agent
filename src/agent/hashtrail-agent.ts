@@ -114,6 +114,7 @@ export async function runLiveHashTrailAgent(input: {
       balance,
       postcard,
       latestMessages,
+      hcsReceipt: receipt,
       htsMint: mint,
       summary: `HashTrail minted ${mint.amount} ${HASHTRAIL_FUN_TOKEN.symbol} on Hedera testnet token=${mint.tokenId}${mint.transactionId ? ` tx=${mint.transactionId}` : ""}${pinToken}`,
     };
@@ -153,6 +154,7 @@ export async function runLiveHashTrailAgent(input: {
     balance,
     postcard,
     latestMessages,
+    hcsReceipt: receipt,
     summary: `HashTrail postcard posted to ${receipt.topicId} on Hedera testnet.${sequence}${tx}${pinTopic}`,
   };
 }

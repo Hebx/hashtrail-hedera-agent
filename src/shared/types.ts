@@ -31,8 +31,15 @@ export type HashTrailResult = {
   balance: string;
   postcard: HashTrailPostcard;
   latestMessages: HashTrailPostcard[];
+  hcsReceipt?: HcsSubmitReceipt;
   htsMint?: HtsMintReceipt;
   summary: string;
+};
+
+export type HcsSubmitReceipt = {
+  topicId: string;
+  transactionId?: string;
+  sequenceNumber?: number;
 };
 
 export type HtsTokenReceipt = {

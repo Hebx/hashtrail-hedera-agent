@@ -114,10 +114,12 @@ npm run lint
 npm test -- --run
 npm run build
 npm run demo
+npm run demo:transcript
 npm run secrets:scan
 ```
 
 ## Submission Placeholders
 
 - Demo/social post: fill in `submission/DRAFT.md`.
+- Live transcript: generate `submission/demo-testnet-transcript.md` with `npm run demo:transcript`.
 - Hedera tool feedback: fill in `submission/FEEDBACK.md`, then paste the submitted feedback link into `submission/DRAFT.md`.
