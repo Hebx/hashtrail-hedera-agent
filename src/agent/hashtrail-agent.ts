@@ -9,7 +9,15 @@ import {
 import { createLiveNftBoundary, type NftLiveBoundary } from "../hedera/nft.js";
 import { createLiveTipBoundary, type TipLiveBoundary } from "../hedera/tip.js";
 import { enforceMintAllowlist } from "../policies/allowlist.js";
-import { resolveRecipient, type RecipientRegistry } from "./recipients.js";
+import {
+  buildAddressBookReceipt,
+  parseAddressBookIntent,
+  registryFromAddressBookReceipts,
+  resolveRecipient,
+  type RecipientRef,
+  type RecipientRegistry,
+  type ResolvedRecipient,
+} from "./recipients.js";
 import { parseTipIntent } from "./tip-jar.js";
 import type {
   HashTrailEnv,
@@ -80,6 +88,53 @@ export async function runLiveHashTrailAgent(input: {
   const topicId = await input.boundaries.hcs.ensureTopic();
   const balance = await input.boundaries.getBalance();
   const postcard = buildPostcard(input.env);
+  const addressBookIntent = parseAddressBookIntent(input.input);
+
+  if (addressBookIntent) {
+    if (addressBookIntent.kind === "invalid") {
+      return {
+        status: "denied",
+        mode: "live",
+        topicId,
+        balance,
+        postcard,
+        latestMessages: await readLatestWithRetry(input),
+        summary: `Address book registration declined: ${addressBookIntent.reason}`,
+      };
+    }
+
+    if (!input.boundaries.hcs.submitAddressBookReceipt) {
+      throw new Error(
+        "HCS address-book receipt boundary is required when registering recipients",
+      );
+    }
+
+    const addressBookReceipt = buildAddressBookReceipt({
+      env: input.env,
+      alias: addressBookIntent.alias,
+      accountId: addressBookIntent.accountId,
+      note: addressBookIntent.note,
+    });
+    const receipt =
+      await input.boundaries.hcs.submitAddressBookReceipt(addressBookReceipt);
+    const latestMessages = await readLatestWithRetry({
+      ...input,
+      topicId: receipt.topicId,
+    });
+
+    return {
+      status: "ok",
+      mode: "live",
+      topicId: receipt.topicId,
+      balance,
+      postcard,
+      latestMessages,
+      hcsReceipt: receipt,
+      addressBookReceipt,
+      summary: `Registered ${addressBookReceipt.alias} as ${addressBookReceipt.accountId} in the HashTrail HCS address book.`,
+    };
+  }
+
   const tipIntent = parseTipIntent(input.input);
 
   if (tipIntent) {
@@ -107,7 +162,14 @@ export async function runLiveHashTrailAgent(input: {
       };
     }
 
-    const recipient = resolveRecipient(tipIntent.recipient, input.recipients ?? {});
+    const recipient = await resolveLiveRecipient({
+      ref: tipIntent.recipient,
+      boundaries: input.boundaries,
+      topicId,
+      localRegistry: input.recipients ?? {},
+      attempts: input.readbackAttempts ?? 4,
+      retryDelayMs: input.readbackRetryDelayMs ?? 1_500,
+    });
     if (!recipient) {
       return {
         status: "denied",
@@ -137,6 +199,7 @@ export async function runLiveHashTrailAgent(input: {
         accountId: recipient.accountId,
         source: recipient.source,
         alias: recipient.alias,
+        registry: recipient.registry,
       },
       reason: tipIntent.reason,
       hbarTransfer,
@@ -319,6 +382,37 @@ export async function runHashTrailAgent(input: {
   }
 }
 
+async function resolveLiveRecipient(input: {
+  ref: RecipientRef;
+  boundaries: HashTrailLiveBoundaries;
+  topicId: string;
+  localRegistry: RecipientRegistry;
+  attempts?: number;
+  retryDelayMs?: number;
+}): Promise<ResolvedRecipient | null> {
+  if (input.ref.kind === "accountId") {
+    return resolveRecipient(input.ref, input.localRegistry);
+  }
+
+  const attempts = input.attempts ?? 1;
+  const retryDelayMs = input.retryDelayMs ?? 1_500;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const rawMessages = input.boundaries.hcs.readLatestRaw
+      ? await input.boundaries.hcs.readLatestRaw(input.topicId, 25)
+      : [];
+    const hcsRegistry = registryFromAddressBookReceipts(rawMessages);
+    const hcsRecipient = resolveRecipient(input.ref, hcsRegistry);
+    if (hcsRecipient) {
+      return { ...hcsRecipient, registry: "hcs" };
+    }
+    if (attempt < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  }
+
+  return resolveRecipient(input.ref, input.localRegistry);
+}
+
 async function mintAndTransferTipNft(input: {
   env: HashTrailEnv;
   boundaries: HashTrailLiveBoundaries;
@@ -379,6 +473,11 @@ function buildTipReceipt(input: {
       to: input.tip.hbarTransfer.to,
       amountHbar: input.tip.hbarTransfer.amountHbar,
       transactionId: input.tip.hbarTransfer.transactionId,
+    },
+    recipient: {
+      alias: input.tip.recipient.alias,
+      accountId: input.tip.recipient.accountId,
+      registry: input.tip.recipient.registry,
     },
     ...(input.nftMint && input.nftTransfer
       ? {

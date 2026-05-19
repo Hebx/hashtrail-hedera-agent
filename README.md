@@ -18,12 +18,14 @@ wallet internals, token standards, or consensus services during a live demo.
 They type:
 
 ```bash
+npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
 HashTrail does the rest:
 
 - checks the operator balance
+- resolves `alice` from a public HCS address-book receipt
 - sends the HBAR tip on Hedera testnet
 - mints a small Tip Card NFT as a commemorative receipt
 - transfers the NFT to the recipient when their account can receive it
@@ -55,7 +57,7 @@ HashTrail turns that workflow into a lightweight proof trail:
   member
 - **Action:** send a small HBAR tip and issue a Tip Card NFT
 - **Record:** write a public HCS receipt that includes the intent, payment, NFT
-  outcome, timestamp, and transaction ids
+  outcome, timestamp, recipient registry, and transaction ids
 - **Result:** anyone can later check the HashScan links and see that the reward
   happened on Hedera testnet
 
@@ -67,11 +69,12 @@ a clear first agent: AI intent in, Hedera receipts out.
 The current live transcript is in
 [`submission/demo-testnet-transcript.md`](submission/demo-testnet-transcript.md).
 
-It shows four end-to-end testnet commands:
+It shows five end-to-end testnet commands:
 
 - post a HashTrail receipt postcard to HCS
 - mint one bounded `HTFUN` proof token
 - read back recent HCS messages
+- register `alice` in a public HCS address-book receipt
 - tip `0.25 HBAR` to a demo recipient and transfer a Tip Card NFT
 
 Live proof objects from the latest transcript:
@@ -80,8 +83,9 @@ Live proof objects from the latest transcript:
 - HTFUN token: `0.0.9005160`
 - Tip Card NFT collection: `0.0.9007634`
 - Demo recipient: `0.0.9007632`
-- Tip HBAR transaction: `0.0.7304745@1779230416.743412529`
-- Tip NFT transfer transaction: `0.0.7304745@1779230423.457062626`
+- Address-book transaction: `0.0.7304745@1779232318.516978523`
+- Tip HBAR transaction: `0.0.7304745@1779232320.299717768`
+- Tip NFT transfer transaction: `0.0.7304745@1779232324.270092094`
 
 ## How To Understand Hedera In This Demo
 
@@ -154,12 +158,14 @@ Expected mock output includes:
 npm run hashtrail -- "make me a hashtrail postcard"
 npm run hashtrail -- "check my balance and read the last 3 postcards"
 npm run hashtrail -- "mint the tiny fun token"
+npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
 The mint command declines unless `WEEK1_ALLOW_MINT=true`.
 The tip command declines unless `WEEK1_ALLOW_TIP=true`; aliases resolve from
-`recipients.json`.
+`hashtrail.address-book.v1` HCS receipts first, then local `recipients.json` as
+a bootstrap fallback.
 
 ## Live Testnet Mode
 
@@ -216,10 +222,16 @@ Pin this token in .env as HASHTRAIL_HTS_TOKEN_ID=<tokenId>
 To run the guarded tip jar:
 
 ```bash
+npm run hashtrail -- "register alice as 0.0.xxxxx for demo recipient"
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
-The recipient may be a raw `0.0.x` account id or an alias in `recipients.json`:
+The recipient may be a raw `0.0.x` account id or an alias registered on HCS.
+The registry command writes a `hashtrail.address-book.v1` receipt to the same
+topic used for postcards and tip receipts. That makes the demo address book
+inspectable on HashScan and replayable from mirror-node history.
+
+`recipients.json` is still supported as a local bootstrap fallback:
 
 ```bash
 cp recipients.example.json recipients.json
@@ -234,8 +246,10 @@ cp recipients.example.json recipients.json
 }
 ```
 
-`recipients.json` is local and gitignored so demo account choices do not leak
-into the public submission branch.
+`recipients.json` is gitignored so demo account choices do not leak into the
+public submission branch. For a fully on-chain demo, run the registry command
+before tipping; the tip flow reads HCS address-book receipts before checking
+the local fallback file.
 
 When `WEEK1_ALLOW_TIP_NFT=true`, the tip flow creates or reuses the `HTTIP` NFT
 collection, mints one serial with compact tip metadata, tries to transfer it to

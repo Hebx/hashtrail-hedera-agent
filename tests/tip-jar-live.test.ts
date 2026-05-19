@@ -45,6 +45,7 @@ describe("runLiveHashTrailAgent tip flow", () => {
               transactionId: "0.0.123@1710000200.000000001",
             };
           },
+          submitAddressBookReceipt: async () => ({ topicId: "0.0.777" }),
           readLatest: async () => [],
           readLatestRaw: async () => [],
         },
@@ -110,6 +111,93 @@ describe("runLiveHashTrailAgent tip flow", () => {
     expect(result.summary).toContain("Tipped 1 HBAR");
     expect(result.summary).toContain("0.0.9005200");
     expect(result.summary).toContain("serial 7");
+  });
+
+  test("registers an alias as an HCS address-book receipt", async () => {
+    const env = loadEnv(baseLiveEnv);
+    const hcsMessages: string[] = [];
+
+    const result = await runLiveHashTrailAgent({
+      input: "register alice as 0.0.9007632 for demo recipient",
+      env,
+      recipients: {},
+      readbackAttempts: 1,
+      boundaries: {
+        ...makeNoopBoundaries(),
+        hcs: {
+          ...makeNoopBoundaries().hcs,
+          submitAddressBookReceipt: async (receipt) => {
+            hcsMessages.push(JSON.stringify(receipt));
+            return {
+              topicId: "0.0.777",
+              sequenceNumber: 3,
+              transactionId: "0.0.123@1710000300.000000001",
+            };
+          },
+        },
+      },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(result.addressBookReceipt).toMatchObject({
+      kind: "hashtrail.address-book.v1",
+      alias: "alice",
+      accountId: "0.0.9007632",
+      note: "demo recipient",
+    });
+    expect(hcsMessages[0]).toContain("hashtrail.address-book.v1");
+    expect(result.summary).toContain("HashTrail HCS address book");
+  });
+
+  test("resolves tip aliases from HCS address-book receipts before local fallback", async () => {
+    const env = loadEnv(baseLiveEnv);
+    const transferCalls: { recipientId: string; amountHbar: number }[] = [];
+
+    const result = await runLiveHashTrailAgent({
+      input: "tip 0.5 hbar to alice for testing",
+      env,
+      recipients: {},
+      readbackAttempts: 1,
+      boundaries: {
+        ...makeNoopBoundaries(),
+        hcs: {
+          ...makeNoopBoundaries().hcs,
+          readLatestRaw: async () => [
+            {
+              kind: "hashtrail.address-book.v1",
+              network: "testnet",
+              agent: "hashtrail-hedera-agent",
+              displayName: "ihab",
+              createdAt: "2026-05-19T23:00:00.000Z",
+              alias: "alice",
+              accountId: "0.0.9007632",
+            },
+          ],
+        },
+        tip: {
+          transferHbar: async (recipientId, amountHbar) => {
+            transferCalls.push({ recipientId, amountHbar });
+            return {
+              from: "0.0.123",
+              to: recipientId,
+              amountHbar,
+              transactionId: "0.0.123@1710000000.000000001",
+            };
+          },
+        },
+      },
+    });
+
+    expect(result.status).toBe("ok");
+    expect(result.tip?.recipient).toMatchObject({
+      accountId: "0.0.9007632",
+      alias: "alice",
+      registry: "hcs",
+    });
+    expect(result.tipReceipt?.recipient?.registry).toBe("hcs");
+    expect(transferCalls).toEqual([
+      { recipientId: "0.0.9007632", amountHbar: 0.5 },
+    ]);
   });
 
   test("denies tip flow when WEEK1_ALLOW_TIP is false", async () => {
@@ -256,6 +344,7 @@ function makeNoopBoundaries() {
       ensureTopic: async () => "0.0.777",
       submitPostcard: async () => ({ topicId: "0.0.777" }),
       submitTipReceipt: async () => ({ topicId: "0.0.777", sequenceNumber: 0 }),
+      submitAddressBookReceipt: async () => ({ topicId: "0.0.777" }),
       readLatest: async () => [],
       readLatestRaw: async () => [],
     },

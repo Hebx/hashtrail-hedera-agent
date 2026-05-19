@@ -5,6 +5,7 @@ import {
 } from "@hiero-ledger/sdk";
 
 import type {
+  AddressBookReceiptV1,
   HashTrailEnv,
   HashTrailPostcard,
   TipReceiptV1,
@@ -20,6 +21,9 @@ export type HcsLiveBoundary = {
   ensureTopic: () => Promise<string>;
   submitPostcard: (postcard: HashTrailPostcard) => Promise<HcsReceipt>;
   submitTipReceipt?: (receipt: TipReceiptV1) => Promise<HcsReceipt>;
+  submitAddressBookReceipt?: (
+    receipt: AddressBookReceiptV1,
+  ) => Promise<HcsReceipt>;
   readLatest: (topicId: string, limit: number) => Promise<HashTrailPostcard[]>;
   readLatestRaw?: (topicId: string, limit: number) => Promise<unknown[]>;
 };
@@ -34,6 +38,9 @@ export function createUnimplementedHcsBoundary(): HcsLiveBoundary {
     },
     submitTipReceipt: async () => {
       throw new Error("Live HCS tip receipt submission is not enabled in mock mode");
+    },
+    submitAddressBookReceipt: async () => {
+      throw new Error("Live HCS address-book receipt submission is not enabled in mock mode");
     },
     readLatest: async () => {
       throw new Error("Live HCS query is not enabled in mock mode");
@@ -79,6 +86,15 @@ export function createLiveHcsBoundary(input: {
     },
 
     submitTipReceipt: async (receipt) => {
+      const topicId = await ensureTopic();
+      return submitJsonMessage({
+        client: input.client,
+        topicId,
+        message: receipt,
+      });
+    },
+
+    submitAddressBookReceipt: async (receipt) => {
       const topicId = await ensureTopic();
       return submitJsonMessage({
         client: input.client,

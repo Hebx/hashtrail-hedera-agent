@@ -1,7 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import { parseTipIntent } from "../src/agent/tip-jar.js";
-import { resolveRecipient } from "../src/agent/recipients.js";
+import {
+  parseAddressBookIntent,
+  registryFromAddressBookReceipts,
+  resolveRecipient,
+} from "../src/agent/recipients.js";
 
 describe("parseTipIntent", () => {
   test("parses amount, alias, and reason", () => {
@@ -57,6 +61,7 @@ describe("resolveRecipient", () => {
       source: "alias",
       alias: "alice",
       note: "demo recipient",
+      registry: "local",
     });
   });
 
@@ -71,5 +76,48 @@ describe("resolveRecipient", () => {
 
   test("returns null for unknown aliases", () => {
     expect(resolveRecipient({ kind: "alias", value: "bob" }, registry)).toBeNull();
+  });
+});
+
+describe("address book registry", () => {
+  test("parses address-book registration commands", () => {
+    expect(
+      parseAddressBookIntent("register alice as 0.0.9007632 for demo recipient"),
+    ).toEqual({
+      kind: "register",
+      alias: "alice",
+      accountId: "0.0.9007632",
+      note: "demo recipient",
+    });
+  });
+
+  test("builds a registry from HCS address-book receipts with latest entry winning", () => {
+    const registry = registryFromAddressBookReceipts([
+      {
+        kind: "hashtrail.address-book.v1",
+        network: "testnet",
+        agent: "hashtrail-hedera-agent",
+        displayName: "ihab",
+        createdAt: "2026-05-19T23:00:00.000Z",
+        alias: "alice",
+        accountId: "0.0.9007632",
+        note: "current",
+      },
+      {
+        kind: "hashtrail.address-book.v1",
+        network: "testnet",
+        agent: "hashtrail-hedera-agent",
+        displayName: "ihab",
+        createdAt: "2026-05-19T22:00:00.000Z",
+        alias: "alice",
+        accountId: "0.0.1",
+        note: "old",
+      },
+    ]);
+
+    expect(registry.alice).toEqual({
+      accountId: "0.0.9007632",
+      note: "current",
+    });
   });
 });

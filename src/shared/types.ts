@@ -36,6 +36,7 @@ export type HashTrailResult = {
   postcard: HashTrailPostcard;
   latestMessages: HashTrailPostcard[];
   hcsReceipt?: HcsSubmitReceipt;
+  addressBookReceipt?: AddressBookReceiptV1;
   htsMint?: HtsMintReceipt;
   tip?: TipExecution;
   tipNft?: NftTransferReceipt;
@@ -45,9 +46,25 @@ export type HashTrailResult = {
 
 export type TipExecution = {
   amountHbar: number;
-  recipient: { accountId: string; source: "alias" | "accountId"; alias?: string };
+  recipient: {
+    accountId: string;
+    source: "alias" | "accountId";
+    alias?: string;
+    registry?: "hcs" | "local";
+  };
   reason?: string;
   hbarTransfer: HbarTransferReceipt;
+};
+
+export type AddressBookReceiptV1 = {
+  kind: "hashtrail.address-book.v1";
+  network: "testnet";
+  agent: "hashtrail-hedera-agent";
+  displayName: string;
+  createdAt: string;
+  alias: string;
+  accountId: string;
+  note?: string;
 };
 
 export type HbarTransferReceipt = {
@@ -91,6 +108,11 @@ export type TipReceiptV1 = {
     to: string;
     amountHbar: number;
     transactionId?: string;
+  };
+  recipient?: {
+    alias?: string;
+    accountId: string;
+    registry?: "hcs" | "local";
   };
   tipCard?: {
     tokenId: string;

@@ -9,6 +9,7 @@ import {
   hashScanTopicUrl,
   hashScanTransactionUrl,
 } from "./hedera/hashscan.js";
+import { loadRecipientRegistry } from "./agent/recipients.js";
 import { loadEnv } from "./shared/env.js";
 
 const execFileAsync = promisify(execFile);
@@ -26,6 +27,7 @@ export type DemoTranscriptInput = {
   tokenId?: string;
   tipNftTokenId?: string;
   hcsTransactionId?: string;
+  addressBookTransactionId?: string;
   htsTransactionId?: string;
   tipHbarTransactionId?: string;
   tipNftTransferTransactionId?: string;
@@ -49,6 +51,9 @@ export function buildDemoTranscript(input: DemoTranscriptInput): string {
       : undefined,
     input.hcsTransactionId
       ? `- HCS transaction: ${hashScanTransactionUrl(input.hcsTransactionId)}`
+      : undefined,
+    input.addressBookTransactionId
+      ? `- Address-book transaction: ${hashScanTransactionUrl(input.addressBookTransactionId)}`
       : undefined,
     input.htsTransactionId
       ? `- HTS mint transaction: ${hashScanTransactionUrl(input.htsTransactionId)}`
@@ -116,17 +121,26 @@ async function main(): Promise<void> {
   if (env.mode !== "live") {
     throw new Error("demo transcript requires HBL_LIVE=1");
   }
+  const recipients = loadRecipientRegistry();
+  const demoRecipient = recipients.alice;
+  if (!demoRecipient) {
+    throw new Error("demo transcript requires alice in recipients.json");
+  }
 
   const commands = [
     await runCommand(["make me a hashtrail receipt"]),
     await runCommand(["mint the tiny fun token"]),
     await runCommand(["check my balance and read the last 3 postcards"]),
+    await runCommand([
+      `register alice as ${demoRecipient.accountId} for demo recipient with automatic token associations`,
+    ]),
     await runCommand(["tip 0.25 hbar to alice for shipping the demo"]),
   ];
   const allOutput = commands.map((entry) => entry.output).join("\n");
   const hcsOutput = commands[0]?.output ?? "";
   const htsOutput = commands[1]?.output ?? "";
-  const tipOutput = commands[3]?.output ?? "";
+  const addressBookOutput = commands[3]?.output ?? "";
+  const tipOutput = commands[4]?.output ?? "";
   const transcript = buildDemoTranscript({
     generatedAt: new Date().toISOString(),
     accountId: env.hederaOperatorId,
@@ -137,6 +151,10 @@ async function main(): Promise<void> {
       findFirst(/^tipNftToken=https:\/\/hashscan\.io\/testnet\/token\/(0\.0\.\d+)/m, tipOutput) ??
       env.nftTokenId,
     hcsTransactionId: findFirst(/\btx=([0-9.]+@[0-9.]+)/, hcsOutput),
+    addressBookTransactionId: findFirst(
+      /^hcsTransaction=https:\/\/hashscan\.io\/testnet\/tx\/([0-9.]+@[0-9.]+)/m,
+      addressBookOutput,
+    ),
     htsTransactionId: findFirst(/\btx=([0-9.]+@[0-9.]+)/, htsOutput),
     tipHbarTransactionId: findFirst(
       /^tipHbarTransaction=https:\/\/hashscan\.io\/testnet\/tx\/([0-9.]+@[0-9.]+)/m,
