@@ -2,9 +2,9 @@
 
 HashTrail is a friendly AI receipt agent for Hedera testnet.
 
-Tell it what happened, and it creates a small public proof trail: a readable
-receipt message, a balance check, optional token proof, and a guarded tip with a
-collectible Tip Card NFT.
+Tell it what happened, and it turns a plain-language intent into a public
+Hedera proof trail: HCS receipt, balance check, optional HTS token proof, and a
+guarded HBAR tip sealed with a collectible Tip Card NFT.
 
 The point is simple: an AI agent should not only say it did something. It should
 leave a receipt that people can inspect later.
