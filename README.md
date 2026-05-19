@@ -1,43 +1,137 @@
 # HashTrail
 
-HashTrail is a small Hedera Bounty 1 agent: a friendly testnet receipt-postcard CLI built with Hedera Agent Kit v4.
+HashTrail is a friendly AI receipt agent for Hedera testnet.
 
-It checks the operator HBAR balance, creates or reuses an HCS topic, posts a `hashtrail.postcard.v1` message, reads recent HCS messages back, optionally mints a tiny fun token, and can run a guarded testnet tip flow that transfers HBAR, mints a Tip Card NFT, and writes a `hashtrail.receipt.v1` HCS receipt.
+Tell it what happened, and it creates a small public proof trail: a readable
+receipt message, a balance check, optional token proof, and a guarded tip with a
+collectible Tip Card NFT.
 
-## Why This Fits Bounty 1
+The point is simple: an AI agent should not only say it did something. It should
+leave a receipt that people can inspect later.
 
-Week 1 asks builders to ship a first Hedera agent. HashTrail keeps that scope tight: one natural-language agent, one terminal demo, Hedera testnet only, no SDK or framework layer.
+## The Story
 
-The useful part is the receipt loop. The agent does not just print a response locally; it models a simple HCS proof trail that can be read back.
+A builder ships a demo. A community lead wants to send a small thank-you tip and
+leave a public note proving what the reward was for. They do not want to learn
+wallet internals, token standards, or consensus services during a live demo.
+
+They type:
+
+```bash
+npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
+```
+
+HashTrail does the rest:
+
+- checks the operator balance
+- sends the HBAR tip on Hedera testnet
+- mints a small Tip Card NFT as a commemorative receipt
+- transfers the NFT to the recipient when their account can receive it
+- writes a `hashtrail.receipt.v1` message to Hedera Consensus Service
+- prints HashScan links so anyone can inspect the proof
+
+For a non-technical user, this feels like asking an assistant to "send a thank
+you and save the receipt." For a Hedera reviewer, it demonstrates real testnet
+use of HBAR transfers, HCS messages, HTS tokens, Agent Kit policy controls, and
+readback from the public record.
+
+## User Story
+
+As a community organizer, hackathon operator, or small project lead, I want to
+reward contributors with a simple AI command so that each payment has a public,
+readable receipt showing who was paid, why they were paid, and which on-chain
+actions completed.
+
+## Use Case: Verifiable Contributor Rewards
+
+Many small teams reward people informally: a quick tip, a thank-you note, a
+spreadsheet row, or a Discord message. Those records are easy to lose and hard
+to verify.
+
+HashTrail turns that workflow into a lightweight proof trail:
+
+- **Actor:** a team lead, DAO operator, hackathon organizer, or community admin
+- **Recipient:** a contributor, demo builder, reviewer, or helpful community
+  member
+- **Action:** send a small HBAR tip and issue a Tip Card NFT
+- **Record:** write a public HCS receipt that includes the intent, payment, NFT
+  outcome, timestamp, and transaction ids
+- **Result:** anyone can later check the HashScan links and see that the reward
+  happened on Hedera testnet
+
+This is intentionally modest. It is not a payroll system or a DAO treasury. It is
+a clear first agent: AI intent in, Hedera receipts out.
+
+## What The Live Demo Proves
+
+The current live transcript is in
+[`submission/demo-testnet-transcript.md`](submission/demo-testnet-transcript.md).
+
+It shows four end-to-end testnet commands:
+
+- post a HashTrail receipt postcard to HCS
+- mint one bounded `HTFUN` proof token
+- read back recent HCS messages
+- tip `0.25 HBAR` to a demo recipient and transfer a Tip Card NFT
+
+Live proof objects from the latest transcript:
+
+- HCS topic: `0.0.9004997`
+- HTFUN token: `0.0.9005160`
+- Tip Card NFT collection: `0.0.9007634`
+- Demo recipient: `0.0.9007632`
+- Tip HBAR transaction: `0.0.7304745@1779230416.743412529`
+- Tip NFT transfer transaction: `0.0.7304745@1779230423.457062626`
+
+## How To Understand Hedera In This Demo
+
+You do not need to know Hedera to understand HashTrail. These are the pieces it
+uses:
+
+- **HBAR:** the testnet currency being tipped.
+- **HCS:** Hedera Consensus Service, used here like a public receipt notebook.
+- **HTS:** Hedera Token Service, used here to create the fun token and Tip Card
+  NFT.
+- **HashScan:** the block explorer links printed by the CLI so humans can verify
+  the actions.
+- **Hedera Agent Kit:** the tool layer that lets an AI-controlled workflow talk
+  to Hedera with explicit safety policies.
+
+## Safety Model
+
+HashTrail is designed to be demo-friendly and hard to misuse:
+
+- Testnet only. `HEDERA_NETWORK=mainnet` throws.
+- Mock-first. `HBL_LIVE=0` runs without credentials or network calls.
+- Gemini 2.5 Flash is supported for live LLM mode, but deterministic
+  `HBL_LLM_PROVIDER=none` works without any LLM key.
+- Minting is disabled unless `WEEK1_ALLOW_MINT=true`.
+- HBAR tips are disabled unless `WEEK1_ALLOW_TIP=true`.
+- Tip Card NFT mint/transfer is disabled unless `WEEK1_ALLOW_TIP_NFT=true`.
+- Parsed tip commands are capped before spending HBAR.
+- Transfer-capable Agent Kit tools are covered by a 1 HBAR policy cap.
+- `.env*`, `.local/`, and `recipients.json` are ignored.
 
 ## Hedera Agent Kit v4 Usage
 
-HashTrail imports only the plugins it needs:
+HashTrail imports only the plugins needed for the demo:
 
 - `coreAccountQueryPlugin`
 - `coreConsensusPlugin`
 - `coreConsensusQueryPlugin`
 - `coreTokenPlugin`
 
-The Agent Kit v4 boundary is in `src/hedera/agent-kit.ts`. It wires three controls:
+The Agent Kit boundary is in `src/hedera/agent-kit.ts`. It wires three controls:
 
-- `HashTrailMintAllowlistPolicy`: denies token create/mint unless `WEEK1_ALLOW_MINT=true`.
+- `HashTrailMintAllowlistPolicy`: denies token create/mint unless
+  `WEEK1_ALLOW_MINT=true`.
 - `HashTrailHbarCapPolicy`: denies normalized HBAR amounts above 1 HBAR.
-- `HashTrailAuditLogHook`: emits structured JSON audit lines after tool execution.
+- `HashTrailAuditLogHook`: emits structured JSON audit lines after tool
+  execution.
 
-Live chat-model wiring supports Gemini 2.5 Flash through LangChain's `ChatGoogle` adapter. The deterministic path remains available with `HBL_LLM_PROVIDER=none` for demos that should avoid LLM quota entirely.
-
-## Safety Model
-
-- Testnet only. `HEDERA_NETWORK=mainnet` throws.
-- Mock-first. `HBL_LIVE=0` makes the demo run without credentials or network calls.
-- Minting is disabled by default.
-- When `WEEK1_ALLOW_MINT=true`, minting is bounded to one `HTFUN` token per command.
-- Tip transfers are disabled unless `WEEK1_ALLOW_TIP=true`.
-- Tip Card NFT mint/transfer is disabled unless `WEEK1_ALLOW_TIP_NFT=true`.
-- Parsed tip commands are capped before spending HBAR.
-- Transfer-capable HAK tools are covered by a 1 HBAR post-normalization cap.
-- `.env*` is ignored; only `.env.example` is committed.
+Live chat-model wiring supports Gemini 2.5 Flash through LangChain's
+`ChatGoogle` adapter. The deterministic path remains available with
+`HBL_LLM_PROVIDER=none` for demos that should avoid LLM quota entirely.
 
 ## Quickstart
 
@@ -64,7 +158,8 @@ npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
 The mint command declines unless `WEEK1_ALLOW_MINT=true`.
-The tip command declines unless `WEEK1_ALLOW_TIP=true`; aliases resolve from `recipients.json`.
+The tip command declines unless `WEEK1_ALLOW_TIP=true`; aliases resolve from
+`recipients.json`.
 
 ## Live Testnet Mode
 
@@ -142,9 +237,9 @@ cp recipients.example.json recipients.json
 `recipients.json` is local and gitignored so demo account choices do not leak
 into the public submission branch.
 
-When `WEEK1_ALLOW_TIP_NFT=true`, the tip flow creates or reuses the `HTTIP`
-NFT collection, mints one serial with compact tip metadata, tries to transfer it
-to the recipient, and records the outcome in HCS. If the recipient cannot accept
+When `WEEK1_ALLOW_TIP_NFT=true`, the tip flow creates or reuses the `HTTIP` NFT
+collection, mints one serial with compact tip metadata, tries to transfer it to
+the recipient, and records the outcome in HCS. If the recipient cannot accept
 the NFT, the HBAR tip still completes and the NFT serial is kept in treasury with
 the reason recorded.
 
@@ -160,8 +255,9 @@ npm run demo:transcript
 npm run secrets:scan
 ```
 
-## Submission Placeholders
+## Submission Files
 
 - Demo/social post: fill in `submission/DRAFT.md`.
-- Live transcript: generate `submission/demo-testnet-transcript.md` with `npm run demo:transcript`.
-- Hedera tool feedback: fill in `submission/FEEDBACK.md`, then paste the submitted feedback link into `submission/DRAFT.md`.
+- Live transcript: `submission/demo-testnet-transcript.md`.
+- Hedera tool feedback: fill in `submission/FEEDBACK.md`, then paste the
+  submitted feedback link into `submission/DRAFT.md`.
