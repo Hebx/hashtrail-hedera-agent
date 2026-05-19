@@ -18,6 +18,8 @@ import {
   TRANSFER_HBAR_TOOL,
   TRANSFER_HBAR_WITH_ALLOWANCE_TOOL,
 } from "@hashgraph/hedera-agent-kit/plugins";
+import { ChatGoogle } from "@langchain/google";
+import { ChatOpenAI } from "@langchain/openai";
 import type { Client } from "@hiero-ledger/sdk";
 
 import { makeAuditLogLine } from "../policies/audit-log.js";
@@ -141,4 +143,29 @@ export function buildHashTrailToolkit(input: {
     client: input.client,
     configuration: buildHashTrailHakConfiguration(input.env),
   });
+}
+
+export function buildHashTrailChatModel(
+  env: HashTrailEnv,
+): ChatGoogle | ChatOpenAI | null {
+  if (env.llmProvider === "none") {
+    return null;
+  }
+
+  if (env.llmProvider === "gemini") {
+    return new ChatGoogle(env.llmModel, {
+      apiKey: env.geminiApiKey,
+      temperature: 0,
+    });
+  }
+
+  if (env.llmProvider === "openai") {
+    return new ChatOpenAI({
+      model: env.llmModel,
+      apiKey: env.openAiApiKey,
+      temperature: 0,
+    });
+  }
+
+  throw new Error(`Unsupported HBL_LLM_PROVIDER=${env.llmProvider}`);
 }

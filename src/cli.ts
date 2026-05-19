@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { runHashTrailAgent } from "./agent/hashtrail-agent.js";
+import { loadRecipientRegistry } from "./agent/recipients.js";
 import { buildHashScanLinks } from "./hedera/hashscan.js";
 import { loadEnv } from "./shared/env.js";
 
 const input = process.argv.slice(2).join(" ") || "make me a hashtrail postcard";
 const env = loadEnv();
-const result = await runHashTrailAgent({ input, env });
+const recipients = loadRecipientRegistry();
+const result = await runHashTrailAgent({ input, env, recipients });
 
 console.log(`HashTrail status=${result.status} mode=${result.mode}`);
 console.log(`balance=${result.balance}`);
@@ -22,6 +24,8 @@ const hashScanLinks = buildHashScanLinks({
   topicId: result.topicId,
   hcsTransactionId: result.hcsReceipt?.transactionId,
   htsMint: result.htsMint,
+  hbarTransfer: result.tip?.hbarTransfer,
+  tipNft: result.tipNft,
 });
 if (Object.keys(hashScanLinks).length > 0) {
   console.log("hashscan:");

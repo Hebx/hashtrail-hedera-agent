@@ -1,4 +1,8 @@
-import type { HtsMintReceipt } from "../shared/types.js";
+import type {
+  HbarTransferReceipt,
+  HtsMintReceipt,
+  NftTransferReceipt,
+} from "../shared/types.js";
 
 const HASHSAN_TESTNET_BASE_URL = "https://hashscan.io/testnet";
 
@@ -8,6 +12,9 @@ export type HashScanLinks = {
   hcsTransaction?: string;
   token?: string;
   htsMintTransaction?: string;
+  tipHbarTransaction?: string;
+  tipNftToken?: string;
+  tipNftTransferTransaction?: string;
 };
 
 export function hashScanAccountUrl(accountId: string): string {
@@ -31,6 +38,8 @@ export function buildHashScanLinks(input: {
   topicId?: string;
   hcsTransactionId?: string;
   htsMint?: HtsMintReceipt;
+  hbarTransfer?: HbarTransferReceipt;
+  tipNft?: NftTransferReceipt;
 }): HashScanLinks {
   return {
     ...(input.accountId
@@ -47,6 +56,23 @@ export function buildHashScanLinks(input: {
       ? {
           htsMintTransaction: hashScanTransactionUrl(
             input.htsMint.transactionId,
+          ),
+        }
+      : {}),
+    ...(input.hbarTransfer?.transactionId
+      ? {
+          tipHbarTransaction: hashScanTransactionUrl(
+            input.hbarTransfer.transactionId,
+          ),
+        }
+      : {}),
+    ...(input.tipNft?.tokenId
+      ? { tipNftToken: hashScanTokenUrl(input.tipNft.tokenId) }
+      : {}),
+    ...(input.tipNft?.transactionId
+      ? {
+          tipNftTransferTransaction: hashScanTransactionUrl(
+            input.tipNft.transactionId,
           ),
         }
       : {}),

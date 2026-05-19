@@ -26,6 +26,16 @@ function requireLiveValue(
   return value;
 }
 
+function defaultModelFor(provider: string): string {
+  if (provider === "gemini") {
+    return "gemini-2.5-flash";
+  }
+  if (provider === "none") {
+    return "none";
+  }
+  return "gpt-4o-mini";
+}
+
 export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
   const includeProcessEnv = input === process.env;
   const network = read(input, "HEDERA_NETWORK", includeProcessEnv) ?? "testnet";
@@ -44,6 +54,9 @@ export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
     if (llmProvider === "openai") {
       requireLiveValue(input, "OPENAI_API_KEY", includeProcessEnv);
     }
+    if (llmProvider === "gemini") {
+      requireLiveValue(input, "GEMINI_API_KEY", includeProcessEnv);
+    }
   }
 
   return {
@@ -57,12 +70,19 @@ export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
       includeProcessEnv,
     ),
     llmProvider,
-    llmModel: read(input, "HBL_LLM_MODEL", includeProcessEnv) ?? "gpt-4o-mini",
+    llmModel:
+      read(input, "HBL_LLM_MODEL", includeProcessEnv) ??
+      defaultModelFor(llmProvider),
     openAiApiKey: read(input, "OPENAI_API_KEY", includeProcessEnv),
+    geminiApiKey: read(input, "GEMINI_API_KEY", includeProcessEnv),
     displayName:
       read(input, "HASHTRAIL_DISPLAY_NAME", includeProcessEnv) ?? "ihab",
     hcsTopicId: read(input, "HASHTRAIL_HCS_TOPIC_ID", includeProcessEnv),
     htsTokenId: read(input, "HASHTRAIL_HTS_TOKEN_ID", includeProcessEnv),
+    nftTokenId: read(input, "HASHTRAIL_NFT_TOKEN_ID", includeProcessEnv),
     allowMint: read(input, "WEEK1_ALLOW_MINT", includeProcessEnv) === "true",
+    allowTip: read(input, "WEEK1_ALLOW_TIP", includeProcessEnv) === "true",
+    allowTipNft:
+      read(input, "WEEK1_ALLOW_TIP_NFT", includeProcessEnv) === "true",
   };
 }

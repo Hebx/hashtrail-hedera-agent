@@ -24,8 +24,11 @@ export type DemoTranscriptInput = {
   commands: DemoTranscriptCommand[];
   topicId?: string;
   tokenId?: string;
+  tipNftTokenId?: string;
   hcsTransactionId?: string;
   htsTransactionId?: string;
+  tipHbarTransactionId?: string;
+  tipNftTransferTransactionId?: string;
 };
 
 const TRANSCRIPT_PATH = "submission/demo-testnet-transcript.md";
@@ -41,11 +44,20 @@ export function buildDemoTranscript(input: DemoTranscriptInput): string {
     input.tokenId
       ? `- HTS token: ${hashScanTokenUrl(input.tokenId)}`
       : undefined,
+    input.tipNftTokenId
+      ? `- Tip Card NFT: ${hashScanTokenUrl(input.tipNftTokenId)}`
+      : undefined,
     input.hcsTransactionId
       ? `- HCS transaction: ${hashScanTransactionUrl(input.hcsTransactionId)}`
       : undefined,
     input.htsTransactionId
       ? `- HTS mint transaction: ${hashScanTransactionUrl(input.htsTransactionId)}`
+      : undefined,
+    input.tipHbarTransactionId
+      ? `- Tip HBAR transaction: ${hashScanTransactionUrl(input.tipHbarTransactionId)}`
+      : undefined,
+    input.tipNftTransferTransactionId
+      ? `- Tip NFT transfer transaction: ${hashScanTransactionUrl(input.tipNftTransferTransactionId)}`
       : undefined,
   ].filter((line): line is string => Boolean(line));
 
@@ -109,18 +121,31 @@ async function main(): Promise<void> {
     await runCommand(["make me a hashtrail receipt"]),
     await runCommand(["mint the tiny fun token"]),
     await runCommand(["check my balance and read the last 3 postcards"]),
+    await runCommand(["tip 0.25 hbar to alice for shipping the demo"]),
   ];
   const allOutput = commands.map((entry) => entry.output).join("\n");
   const hcsOutput = commands[0]?.output ?? "";
   const htsOutput = commands[1]?.output ?? "";
+  const tipOutput = commands[3]?.output ?? "";
   const transcript = buildDemoTranscript({
     generatedAt: new Date().toISOString(),
     accountId: env.hederaOperatorId,
     commands,
     topicId: findFirst(/^topicId=(0\.0\.\d+)/m, allOutput) ?? env.hcsTopicId,
     tokenId: findFirst(/\btoken=(0\.0\.\d+)/, allOutput) ?? env.htsTokenId,
+    tipNftTokenId:
+      findFirst(/^tipNftToken=https:\/\/hashscan\.io\/testnet\/token\/(0\.0\.\d+)/m, tipOutput) ??
+      env.nftTokenId,
     hcsTransactionId: findFirst(/\btx=([0-9.]+@[0-9.]+)/, hcsOutput),
     htsTransactionId: findFirst(/\btx=([0-9.]+@[0-9.]+)/, htsOutput),
+    tipHbarTransactionId: findFirst(
+      /^tipHbarTransaction=https:\/\/hashscan\.io\/testnet\/tx\/([0-9.]+@[0-9.]+)/m,
+      tipOutput,
+    ),
+    tipNftTransferTransactionId: findFirst(
+      /^tipNftTransferTransaction=https:\/\/hashscan\.io\/testnet\/tx\/([0-9.]+@[0-9.]+)/m,
+      tipOutput,
+    ),
   });
 
   await writeFile(TRANSCRIPT_PATH, transcript);

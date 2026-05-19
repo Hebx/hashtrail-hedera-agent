@@ -4,7 +4,11 @@ import {
   type Client,
 } from "@hiero-ledger/sdk";
 
-import type { HashTrailEnv, HashTrailPostcard } from "../shared/types.js";
+import type {
+  HashTrailEnv,
+  HashTrailPostcard,
+  TipReceiptV1,
+} from "../shared/types.js";
 
 export type HcsReceipt = {
   topicId: string;
@@ -15,7 +19,9 @@ export type HcsReceipt = {
 export type HcsLiveBoundary = {
   ensureTopic: () => Promise<string>;
   submitPostcard: (postcard: HashTrailPostcard) => Promise<HcsReceipt>;
+  submitTipReceipt?: (receipt: TipReceiptV1) => Promise<HcsReceipt>;
   readLatest: (topicId: string, limit: number) => Promise<HashTrailPostcard[]>;
+  readLatestRaw?: (topicId: string, limit: number) => Promise<unknown[]>;
 };
 
 export function createUnimplementedHcsBoundary(): HcsLiveBoundary {
@@ -26,8 +32,14 @@ export function createUnimplementedHcsBoundary(): HcsLiveBoundary {
     submitPostcard: async () => {
       throw new Error("Live HCS submission is not enabled in mock mode");
     },
+    submitTipReceipt: async () => {
+      throw new Error("Live HCS tip receipt submission is not enabled in mock mode");
+    },
     readLatest: async () => {
       throw new Error("Live HCS query is not enabled in mock mode");
+    },
+    readLatestRaw: async () => {
+      throw new Error("Live HCS raw query is not enabled in mock mode");
     },
   };
 }
@@ -59,17 +71,20 @@ export function createLiveHcsBoundary(input: {
     ensureTopic,
     submitPostcard: async (postcard) => {
       const topicId = await ensureTopic();
-      const response = await new TopicMessageSubmitTransaction()
-        .setTopicId(topicId)
-        .setMessage(JSON.stringify(postcard))
-        .execute(input.client);
-      const receipt = await response.getReceipt(input.client);
-
-      return {
+      return submitJsonMessage({
+        client: input.client,
         topicId,
-        transactionId: response.transactionId?.toString(),
-        sequenceNumber: receipt.topicSequenceNumber?.toNumber(),
-      };
+        message: postcard,
+      });
+    },
+
+    submitTipReceipt: async (receipt) => {
+      const topicId = await ensureTopic();
+      return submitJsonMessage({
+        client: input.client,
+        topicId,
+        message: receipt,
+      });
     },
 
     readLatest: async (topicId, limit) =>
@@ -78,6 +93,31 @@ export function createLiveHcsBoundary(input: {
         limit,
         mirrorNodeUrl: input.env.hederaMirrorNodeUrl,
       }),
+
+    readLatestRaw: async (topicId, limit) =>
+      readLatestRawFromMirror({
+        topicId,
+        limit,
+        mirrorNodeUrl: input.env.hederaMirrorNodeUrl,
+      }),
+  };
+}
+
+async function submitJsonMessage(input: {
+  client: Client;
+  topicId: string;
+  message: unknown;
+}): Promise<HcsReceipt> {
+  const response = await new TopicMessageSubmitTransaction()
+    .setTopicId(input.topicId)
+    .setMessage(JSON.stringify(input.message))
+    .execute(input.client);
+  const receipt = await response.getReceipt(input.client);
+
+  return {
+    topicId: input.topicId,
+    transactionId: response.transactionId?.toString(),
+    sequenceNumber: receipt.topicSequenceNumber?.toNumber(),
   };
 }
 
@@ -98,6 +138,17 @@ async function readLatestPostcardsFromMirror(input: {
   limit: number;
   mirrorNodeUrl?: string;
 }): Promise<HashTrailPostcard[]> {
+  const messages = await readLatestRawFromMirror(input);
+  return messages
+    .filter((message): message is HashTrailPostcard => isHashTrailPostcard(message))
+    .reverse();
+}
+
+async function readLatestRawFromMirror(input: {
+  topicId: string;
+  limit: number;
+  mirrorNodeUrl?: string;
+}): Promise<unknown[]> {
   const baseUrl = (input.mirrorNodeUrl || defaultMirrorNodeUrl()).replace(
     /\/$/,
     "",
@@ -113,34 +164,32 @@ async function readLatestPostcardsFromMirror(input: {
   const body = (await response.json()) as MirrorTopicMessagesResponse;
   return (body.messages ?? [])
     .map((message) => decodeMirrorMessage(message.message))
-    .filter((message): message is HashTrailPostcard => message !== null)
-    .reverse();
+    .filter((message): message is unknown => message !== null);
 }
 
-function decodeMirrorMessage(
-  encoded: string | undefined,
-): HashTrailPostcard | null {
+function decodeMirrorMessage(encoded: string | undefined): unknown | null {
   if (!encoded) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(
-      Buffer.from(encoded, "base64").toString("utf8"),
-    ) as Partial<HashTrailPostcard>;
-    if (
-      parsed.kind === "hashtrail.postcard.v1" &&
-      parsed.network === "testnet" &&
-      parsed.agent === "hashtrail-hedera-agent" &&
-      typeof parsed.displayName === "string" &&
-      typeof parsed.message === "string" &&
-      typeof parsed.createdAt === "string"
-    ) {
-      return parsed as HashTrailPostcard;
-    }
+    return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
   } catch {
     return null;
   }
+}
 
-  return null;
+function isHashTrailPostcard(value: unknown): value is HashTrailPostcard {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const parsed = value as Partial<HashTrailPostcard>;
+  return (
+    parsed.kind === "hashtrail.postcard.v1" &&
+    parsed.network === "testnet" &&
+    parsed.agent === "hashtrail-hedera-agent" &&
+    typeof parsed.displayName === "string" &&
+    typeof parsed.message === "string" &&
+    typeof parsed.createdAt === "string"
+  );
 }

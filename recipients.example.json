@@ -1,0 +1,6 @@
+{
+  "alice": {
+    "accountId": "0.0.xxxxx",
+    "note": "demo recipient with automatic token associations enabled"
+  }
+}
