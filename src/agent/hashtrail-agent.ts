@@ -443,6 +443,7 @@ function buildTipCardMetadata(input: {
 }): string {
   return JSON.stringify({
     k: "hashtrail.tip-card.v1",
+    d: "v1",
     to: input.recipientId,
     a: input.amountHbar,
     ...(input.reason ? { r: input.reason.slice(0, 24) } : {}),

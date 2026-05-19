@@ -82,6 +82,7 @@ Live proof objects from the latest transcript:
 - HCS topic: `0.0.9004997`
 - HTFUN token: `0.0.9005160`
 - Tip Card NFT collection: `0.0.9007634`
+- Tip Card design: [`assets/tip-card/tip-card-v1.svg`](assets/tip-card/tip-card-v1.svg)
 - Demo recipient: `0.0.9007632`
 - Address-book transaction: `0.0.7304745@1779232318.516978523`
 - Tip HBAR transaction: `0.0.7304745@1779232320.299717768`
