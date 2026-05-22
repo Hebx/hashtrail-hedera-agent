@@ -55,8 +55,8 @@ function buildPostcard(env: HashTrailEnv): HashTrailPostcard {
   return {
     kind: "hashtrail.postcard.v1",
     displayName: env.displayName,
-    network: "testnet",
-    message: `hello from ${env.displayName} on Hedera testnet`,
+    network: env.hederaNetwork,
+    message: `hello from ${env.displayName} on Hedera ${env.hederaNetwork}`,
     createdAt: new Date().toISOString(),
     agent: "hashtrail-hedera-agent",
   };
@@ -240,7 +240,7 @@ export async function runLiveHashTrailAgent(input: {
       tip,
       tipNft: nftResult?.transfer,
       tipReceipt,
-      summary: `Tipped ${tipIntent.amountHbar} HBAR to ${recipient.accountId} on Hedera testnet.${nftSummary}`,
+      summary: `Tipped ${tipIntent.amountHbar} HBAR to ${recipient.accountId} on Hedera ${input.env.hederaNetwork}.${nftSummary}`,
     };
   }
 
@@ -290,7 +290,7 @@ export async function runLiveHashTrailAgent(input: {
       latestMessages,
       hcsReceipt: receipt,
       htsMint: mint,
-      summary: `HashTrail minted ${mint.amount} ${HASHTRAIL_FUN_TOKEN.symbol} on Hedera testnet token=${mint.tokenId}${mint.transactionId ? ` tx=${mint.transactionId}` : ""}${pinToken}`,
+      summary: `HashTrail minted ${mint.amount} ${HASHTRAIL_FUN_TOKEN.symbol} on Hedera ${input.env.hederaNetwork} token=${mint.tokenId}${mint.transactionId ? ` tx=${mint.transactionId}` : ""}${pinToken}`,
     };
   }
 
@@ -304,7 +304,7 @@ export async function runLiveHashTrailAgent(input: {
       balance,
       postcard,
       latestMessages,
-      summary: `HashTrail checked balance and read ${latestMessages.length} ${noun} from ${topicId} on Hedera testnet.`,
+      summary: `HashTrail checked balance and read ${latestMessages.length} ${noun} from ${topicId} on Hedera ${input.env.hederaNetwork}.`,
     };
   }
 
@@ -329,7 +329,7 @@ export async function runLiveHashTrailAgent(input: {
     postcard,
     latestMessages,
     hcsReceipt: receipt,
-    summary: `HashTrail postcard posted to ${receipt.topicId} on Hedera testnet.${sequence}${tx}${pinTopic}`,
+    summary: `HashTrail postcard posted to ${receipt.topicId} on Hedera ${input.env.hederaNetwork}.${sequence}${tx}${pinTopic}`,
   };
 }
 
@@ -423,6 +423,7 @@ async function mintAndTransferTipNft(input: {
   const mint = await input.boundaries.nft.mintNftSerial(
     collection.tokenId,
     buildTipCardMetadata({
+      metadataUri: input.env.tipCardMetadataUri,
       recipientId: input.recipientId,
       amountHbar: input.amountHbar,
       reason: input.reason,
@@ -437,10 +438,15 @@ async function mintAndTransferTipNft(input: {
 }
 
 function buildTipCardMetadata(input: {
+  metadataUri?: string;
   recipientId: string;
   amountHbar: number;
   reason?: string;
 }): string {
+  if (input.metadataUri) {
+    return input.metadataUri;
+  }
+
   return JSON.stringify({
     k: "hashtrail.tip-card.v1",
     d: "v1",
@@ -458,7 +464,7 @@ function buildTipReceipt(input: {
 }): TipReceiptV1 {
   return {
     kind: "hashtrail.receipt.v1",
-    network: "testnet",
+    network: input.env.hederaNetwork,
     agent: "hashtrail-hedera-agent",
     intent: "tip",
     displayName: input.env.displayName,

@@ -1,5 +1,7 @@
+export type HederaNetwork = "testnet" | "mainnet";
+
 export type HashTrailEnv = {
-  hederaNetwork: "testnet";
+  hederaNetwork: HederaNetwork;
   hederaOperatorId?: string;
   hederaOperatorKey?: string;
   hederaMirrorNodeUrl?: string;
@@ -11,6 +13,7 @@ export type HashTrailEnv = {
   hcsTopicId?: string;
   htsTokenId?: string;
   nftTokenId?: string;
+  tipCardMetadataUri?: string;
   allowMint: boolean;
   allowTip: boolean;
   allowTipNft: boolean;
@@ -19,7 +22,7 @@ export type HashTrailEnv = {
 export type HashTrailPostcard = {
   kind: "hashtrail.postcard.v1";
   displayName: string;
-  network: "testnet";
+  network: HederaNetwork;
   message: string;
   createdAt: string;
   agent: "hashtrail-hedera-agent";
@@ -55,7 +58,7 @@ export type TipExecution = {
 
 export type AddressBookReceiptV1 = {
   kind: "hashtrail.address-book.v1";
-  network: "testnet";
+  network: HederaNetwork;
   agent: "hashtrail-hedera-agent";
   displayName: string;
   createdAt: string;
@@ -94,7 +97,7 @@ export type NftCollectionReceipt = {
 
 export type TipReceiptV1 = {
   kind: "hashtrail.receipt.v1";
-  network: "testnet";
+  network: HederaNetwork;
   agent: "hashtrail-hedera-agent";
   intent: "tip";
   displayName: string;

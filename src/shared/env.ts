@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import type { HashTrailEnv } from "./types.js";
+import type { HashTrailEnv, HederaNetwork } from "./types.js";
 
 type EnvInput = Record<string, string | undefined>;
 
@@ -21,7 +21,7 @@ function requireLiveValue(
 ): string {
   const value = read(input, key, includeProcessEnv);
   if (!value || PLACEHOLDER_VALUES.has(value)) {
-    throw new Error(`${key} is required for Hedera testnet execution`);
+    throw new Error(`${key} is required for Hedera execution`);
   }
   return value;
 }
@@ -36,11 +36,41 @@ function defaultModelFor(provider: string): string {
   return "gpt-4o-mini";
 }
 
+function readTipCardMetadataUri(
+  input: EnvInput,
+  includeProcessEnv: boolean,
+): string | undefined {
+  const value = read(input, "HASHTRAIL_TIP_CARD_METADATA_URI", includeProcessEnv);
+  if (!value) return undefined;
+
+  const byteLength = Buffer.byteLength(value, "utf8");
+  if (byteLength > 100) {
+    throw new Error(
+      `HASHTRAIL_TIP_CARD_METADATA_URI must fit Hedera NFT serial metadata (100 bytes max, received ${byteLength})`,
+    );
+  }
+  if (!/^(ipfs|ar|https):\/\//.test(value)) {
+    throw new Error(
+      "HASHTRAIL_TIP_CARD_METADATA_URI must be an ipfs://, ar://, or https:// URI",
+    );
+  }
+
+  return value;
+}
+
 export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
   const includeProcessEnv = input === process.env;
   const network = read(input, "HEDERA_NETWORK", includeProcessEnv) ?? "testnet";
-  if (network !== "testnet") {
-    throw new Error(`HEDERA_NETWORK must be testnet, received ${network}`);
+  if (network !== "testnet" && network !== "mainnet") {
+    throw new Error(`HEDERA_NETWORK must be testnet or mainnet, received ${network}`);
+  }
+  if (
+    network === "mainnet" &&
+    read(input, "HASHTRAIL_ENABLE_MAINNET", includeProcessEnv) !== "true"
+  ) {
+    throw new Error(
+      "HEDERA_NETWORK=mainnet requires HASHTRAIL_ENABLE_MAINNET=true",
+    );
   }
 
   const llmProvider =
@@ -56,7 +86,7 @@ export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
   }
 
   return {
-    hederaNetwork: "testnet",
+    hederaNetwork: network as HederaNetwork,
     hederaOperatorId: read(input, "HEDERA_OPERATOR_ID", includeProcessEnv),
     hederaOperatorKey: read(input, "HEDERA_OPERATOR_KEY", includeProcessEnv),
     hederaMirrorNodeUrl: read(
@@ -75,6 +105,7 @@ export function loadEnv(input: EnvInput = process.env): HashTrailEnv {
     hcsTopicId: read(input, "HASHTRAIL_HCS_TOPIC_ID", includeProcessEnv),
     htsTokenId: read(input, "HASHTRAIL_HTS_TOKEN_ID", includeProcessEnv),
     nftTokenId: read(input, "HASHTRAIL_NFT_TOKEN_ID", includeProcessEnv),
+    tipCardMetadataUri: readTipCardMetadataUri(input, includeProcessEnv),
     allowMint: read(input, "WEEK1_ALLOW_MINT", includeProcessEnv) === "true",
     allowTip: read(input, "WEEK1_ALLOW_TIP", includeProcessEnv) === "true",
     allowTipNft:

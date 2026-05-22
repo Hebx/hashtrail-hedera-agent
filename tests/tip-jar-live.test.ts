@@ -112,6 +112,34 @@ describe("runLiveHashTrailAgent tip flow", () => {
     expect(result.summary).toContain("serial 7");
   });
 
+  test("uses configured HIP-412 metadata URI for wallet-renderable tip NFTs", async () => {
+    const env = loadEnv({
+      ...baseLiveEnv,
+      HASHTRAIL_TIP_CARD_METADATA_URI:
+        "ipfs://bafkreihashtrailtipcardmetadata",
+    });
+    const nftMintCalls: string[] = [];
+
+    await runLiveHashTrailAgent({
+      input: "tip 0.25 hbar to 0.0.9005200 for shipping demo",
+      env,
+      recipients: {},
+      readbackAttempts: 1,
+      boundaries: {
+        ...makeNoopBoundaries(),
+        nft: {
+          ...makeNoopBoundaries().nft,
+          mintNftSerial: async (tokenId, metadata) => {
+            nftMintCalls.push(metadata);
+            return { tokenId, serial: 9 };
+          },
+        },
+      },
+    });
+
+    expect(nftMintCalls).toEqual(["ipfs://bafkreihashtrailtipcardmetadata"]);
+  });
+
   test("registers an alias as an HCS address-book receipt", async () => {
     const env = loadEnv(baseLiveEnv);
     const hcsMessages: string[] = [];

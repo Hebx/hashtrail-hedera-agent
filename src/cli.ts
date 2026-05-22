@@ -41,6 +41,7 @@ function printHashTrailResult(result: HashTrailResult, env: HashTrailEnv): void 
   console.log(result.summary);
 
   const hashScanLinks = buildHashScanLinks({
+    network: env.hederaNetwork,
     accountId: env.hederaOperatorId,
     topicId: result.topicId,
     hcsTransactionId: result.hcsReceipt?.transactionId,

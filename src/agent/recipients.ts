@@ -113,7 +113,7 @@ export function buildAddressBookReceipt(input: {
 }): AddressBookReceiptV1 {
   return {
     kind: "hashtrail.address-book.v1",
-    network: "testnet",
+    network: input.env.hederaNetwork,
     agent: "hashtrail-hedera-agent",
     displayName: input.env.displayName,
     createdAt: new Date().toISOString(),
@@ -152,7 +152,7 @@ export function isAddressBookReceipt(
   const parsed = value as Partial<AddressBookReceiptV1>;
   return (
     parsed.kind === "hashtrail.address-book.v1" &&
-    parsed.network === "testnet" &&
+    (parsed.network === "testnet" || parsed.network === "mainnet") &&
     parsed.agent === "hashtrail-hedera-agent" &&
     typeof parsed.alias === "string" &&
     typeof parsed.accountId === "string" &&

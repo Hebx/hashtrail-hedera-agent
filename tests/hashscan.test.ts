@@ -16,6 +16,15 @@ describe("HashScan link helpers", () => {
     );
   });
 
+  test("builds mainnet links when requested", () => {
+    expect(hashScanTopicUrl("0.0.123", "mainnet")).toBe(
+      "https://hashscan.io/mainnet/topic/0.0.123",
+    );
+    expect(hashScanTransactionUrl("0.0.123@1.2", "mainnet")).toBe(
+      "https://hashscan.io/mainnet/tx/0.0.123@1.2",
+    );
+  });
+
   test("builds links from a HashTrail result", () => {
     const links = buildHashScanLinks({
       accountId: "0.0.7304745",

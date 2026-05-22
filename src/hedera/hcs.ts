@@ -84,14 +84,16 @@ export function createLiveHcsBoundary(input: {
       readLatestPostcardsFromMirror({
         topicId,
         limit,
-        mirrorNodeUrl: input.env.hederaMirrorNodeUrl,
+        mirrorNodeUrl:
+          input.env.hederaMirrorNodeUrl ?? defaultMirrorNodeUrl(input.env),
       }),
 
     readLatestRaw: async (topicId, limit) =>
       readLatestRawFromMirror({
         topicId,
         limit,
-        mirrorNodeUrl: input.env.hederaMirrorNodeUrl,
+        mirrorNodeUrl:
+          input.env.hederaMirrorNodeUrl ?? defaultMirrorNodeUrl(input.env),
       }),
   };
 }
@@ -122,8 +124,10 @@ type MirrorTopicMessagesResponse = {
   messages?: MirrorTopicMessage[];
 };
 
-function defaultMirrorNodeUrl(): string {
-  return "https://testnet.mirrornode.hedera.com";
+function defaultMirrorNodeUrl(env?: HashTrailEnv): string {
+  return env?.hederaNetwork === "mainnet"
+    ? "https://mainnet-public.mirrornode.hedera.com"
+    : "https://testnet.mirrornode.hedera.com";
 }
 
 async function readLatestPostcardsFromMirror(input: {
@@ -179,7 +183,7 @@ function isHashTrailPostcard(value: unknown): value is HashTrailPostcard {
   const parsed = value as Partial<HashTrailPostcard>;
   return (
     parsed.kind === "hashtrail.postcard.v1" &&
-    parsed.network === "testnet" &&
+    (parsed.network === "testnet" || parsed.network === "mainnet") &&
     parsed.agent === "hashtrail-hedera-agent" &&
     typeof parsed.displayName === "string" &&
     typeof parsed.message === "string" &&

@@ -1,10 +1,15 @@
 import type {
+  HederaNetwork,
   HbarTransferReceipt,
   HtsMintReceipt,
   NftTransferReceipt,
 } from "../shared/types.js";
 
-const HASHSAN_TESTNET_BASE_URL = "https://hashscan.io/testnet";
+function hashScanBaseUrl(network: HederaNetwork = "testnet"): string {
+  return network === "mainnet"
+    ? "https://hashscan.io/mainnet"
+    : "https://hashscan.io/testnet";
+}
 
 export type HashScanLinks = {
   account?: string;
@@ -17,23 +22,36 @@ export type HashScanLinks = {
   tipNftTransferTransaction?: string;
 };
 
-export function hashScanAccountUrl(accountId: string): string {
-  return `${HASHSAN_TESTNET_BASE_URL}/account/${accountId}`;
+export function hashScanAccountUrl(
+  accountId: string,
+  network: HederaNetwork = "testnet",
+): string {
+  return `${hashScanBaseUrl(network)}/account/${accountId}`;
 }
 
-export function hashScanTopicUrl(topicId: string): string {
-  return `${HASHSAN_TESTNET_BASE_URL}/topic/${topicId}`;
+export function hashScanTopicUrl(
+  topicId: string,
+  network: HederaNetwork = "testnet",
+): string {
+  return `${hashScanBaseUrl(network)}/topic/${topicId}`;
 }
 
-export function hashScanTokenUrl(tokenId: string): string {
-  return `${HASHSAN_TESTNET_BASE_URL}/token/${tokenId}`;
+export function hashScanTokenUrl(
+  tokenId: string,
+  network: HederaNetwork = "testnet",
+): string {
+  return `${hashScanBaseUrl(network)}/token/${tokenId}`;
 }
 
-export function hashScanTransactionUrl(transactionId: string): string {
-  return `${HASHSAN_TESTNET_BASE_URL}/tx/${transactionId}`;
+export function hashScanTransactionUrl(
+  transactionId: string,
+  network: HederaNetwork = "testnet",
+): string {
+  return `${hashScanBaseUrl(network)}/tx/${transactionId}`;
 }
 
 export function buildHashScanLinks(input: {
+  network?: HederaNetwork;
   accountId?: string;
   topicId?: string;
   hcsTransactionId?: string;
@@ -41,21 +59,28 @@ export function buildHashScanLinks(input: {
   hbarTransfer?: HbarTransferReceipt;
   tipNft?: NftTransferReceipt;
 }): HashScanLinks {
+  const network = input.network ?? "testnet";
   return {
     ...(input.accountId
-      ? { account: hashScanAccountUrl(input.accountId) }
+      ? { account: hashScanAccountUrl(input.accountId, network) }
       : {}),
-    ...(input.topicId ? { topic: hashScanTopicUrl(input.topicId) } : {}),
+    ...(input.topicId ? { topic: hashScanTopicUrl(input.topicId, network) } : {}),
     ...(input.hcsTransactionId
-      ? { hcsTransaction: hashScanTransactionUrl(input.hcsTransactionId) }
+      ? {
+          hcsTransaction: hashScanTransactionUrl(
+            input.hcsTransactionId,
+            network,
+          ),
+        }
       : {}),
     ...(input.htsMint?.tokenId
-      ? { token: hashScanTokenUrl(input.htsMint.tokenId) }
+      ? { token: hashScanTokenUrl(input.htsMint.tokenId, network) }
       : {}),
     ...(input.htsMint?.transactionId
       ? {
           htsMintTransaction: hashScanTransactionUrl(
             input.htsMint.transactionId,
+            network,
           ),
         }
       : {}),
@@ -63,16 +88,18 @@ export function buildHashScanLinks(input: {
       ? {
           tipHbarTransaction: hashScanTransactionUrl(
             input.hbarTransfer.transactionId,
+            network,
           ),
         }
       : {}),
     ...(input.tipNft?.tokenId
-      ? { tipNftToken: hashScanTokenUrl(input.tipNft.tokenId) }
+      ? { tipNftToken: hashScanTokenUrl(input.tipNft.tokenId, network) }
       : {}),
     ...(input.tipNft?.transactionId
       ? {
           tipNftTransferTransaction: hashScanTransactionUrl(
             input.tipNft.transactionId,
+            network,
           ),
         }
       : {}),

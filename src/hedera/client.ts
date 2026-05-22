@@ -16,15 +16,12 @@ export function parseOperatorPrivateKey(value: string): PrivateKey {
 }
 
 export function buildHederaClient(env: HashTrailEnv): Client {
-  if (env.hederaNetwork !== "testnet") {
-    throw new Error("HashTrail only supports Hedera testnet");
-  }
-
   if (!env.hederaOperatorId || !env.hederaOperatorKey) {
     throw new Error("HEDERA_OPERATOR_ID and HEDERA_OPERATOR_KEY are required");
   }
 
-  const client = Client.forTestnet();
+  const client =
+    env.hederaNetwork === "mainnet" ? Client.forMainnet() : Client.forTestnet();
   client.setOperator(
     env.hederaOperatorId,
     parseOperatorPrivateKey(env.hederaOperatorKey),

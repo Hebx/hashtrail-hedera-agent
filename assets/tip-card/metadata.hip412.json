@@ -1,0 +1,38 @@
+{
+  "name": "HashTrail Tip Card",
+  "creator": "HashTrail",
+  "description": "A commemorative Hedera Tip Card for a HashTrail contributor reward. The payment and receipt are verifiable through HCS, HTS, HBAR, and HashScan.",
+  "image": "ipfs://bafybeignyatsozbku25bqblspyfzxtky5wn2lwj6x3znl7mohhkmmwf3yq",
+  "type": "image/png",
+  "format": "HIP412@2.0.0",
+  "properties": {
+    "network": "hedera-testnet",
+    "agent": "hashtrail-hedera-agent",
+    "proof": "HCS receipt + HBAR transfer + HTS NFT"
+  },
+  "attributes": [
+    {
+      "trait_type": "Receipt Type",
+      "value": "Contributor Tip"
+    },
+    {
+      "trait_type": "Agent",
+      "value": "HashTrail"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Hedera"
+    }
+  ],
+  "files": [
+    {
+      "uri": "ipfs://bafybeignyatsozbku25bqblspyfzxtky5wn2lwj6x3znl7mohhkmmwf3yq",
+      "type": "image/png",
+      "is_default_file": true
+    },
+    {
+      "uri": "ipfs://bafkreigd3vukk3texckcekejgidltbce4fopnzobio6piq3snzmhaenzdq",
+      "type": "image/svg+xml"
+    }
+  ]
+}
