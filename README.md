@@ -325,7 +325,3 @@ The live transcript and reviewer-facing artifacts are in
 
 - [`submission/demo-testnet-transcript.md`](submission/demo-testnet-transcript.md)
 - [`submission/mainnet-readiness.md`](submission/mainnet-readiness.md)
-- [`submission/first-run-prod-mainnet-runbook.md`](submission/first-run-prod-mainnet-runbook.md)
-- [`submission/video-runbook.md`](submission/video-runbook.md)
-- [`submission/DRAFT.md`](submission/DRAFT.md)
-- [`submission/FEEDBACK.md`](submission/FEEDBACK.md)
