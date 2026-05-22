@@ -15,6 +15,32 @@ shipping the demo`, and it turns that intent into a public proof trail:
 The design goal is simple: an AI agent should not only say it completed an
 action. It should leave a receipt that people can inspect later.
 
+## User Story
+
+As a community organizer, hackathon operator, DAO contributor, or small project
+lead, I want to reward contributors with a simple AI command so each payment has
+a public, readable receipt showing who was paid, why they were paid, and which
+on-chain actions completed.
+
+## Use Case: Verifiable Contributor Rewards
+
+Small teams often reward work with a Discord message, spreadsheet row, wallet
+transfer, or manual note. Those records are easy to lose and hard to audit.
+
+HashTrail turns that workflow into a lightweight proof trail:
+
+- **Actor:** a team lead, DAO operator, hackathon organizer, or community admin
+- **Recipient:** a contributor, demo builder, reviewer, or helpful community
+  member
+- **Action:** send a small HBAR tip and issue a Tip Card NFT
+- **Record:** write a public HCS receipt that includes the intent, payment, NFT
+  outcome, timestamp, recipient registry, and transaction ids
+- **Result:** anyone can later check HashScan or mirror-node data and verify the
+  reward happened on Hedera
+
+This is not a payroll system or a DAO treasury. It is a narrow production agent:
+AI intent in, Hedera receipts out.
+
 ## Live Mainnet Proof
 
 HashTrail has completed a real mainnet run with a renderable `HTTIP` NFT.
@@ -47,36 +73,6 @@ Mirror node confirmed that token `0.0.10489912` serial `1` is owned by
 `0.0.10231006`, and that the serial metadata decodes to the IPFS URI above.
 Detailed notes live in
 [`submission/mainnet-readiness.md`](submission/mainnet-readiness.md).
-
-## Demo Video
-
-The recommended demo structure is:
-
-1. Show the completed mainnet proof through HashScan, IPFS, and mirror-node
-   readback.
-2. Rerun the live terminal flow on testnet when the recording needs fresh
-   transactions.
-3. Use the Tip Card SVG and HIP-412 metadata files to explain wallet-renderable
-   NFT receipts.
-
-The local recording script is
-[`submission/video-runbook.md`](submission/video-runbook.md).
-
-## What It Solves
-
-Small teams often reward work with a Discord message, spreadsheet row, wallet
-transfer, or manual note. Those records are easy to lose and hard to audit.
-
-HashTrail turns that workflow into a lightweight public record:
-
-- A community lead names a contributor and reason.
-- HashTrail resolves the recipient from a local or HCS-published address book.
-- The agent checks balance and policy gates before spending.
-- Hedera records the payment, NFT receipt, and HCS receipt.
-- Anyone can inspect the proof later from HashScan or mirror-node data.
-
-This is not a payroll system or a DAO treasury. It is a narrow production agent:
-AI intent in, Hedera receipts out.
 
 ## Core Features
 

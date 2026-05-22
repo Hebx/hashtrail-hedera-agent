@@ -1,7 +1,7 @@
 {
   "name": "hashtrail-hedera-agent",
   "version": "0.1.0",
-  "description": "HashTrail, a Hedera Bounty 1 receipt-postcard agent.",
+  "description": "A Hedera receipt agent for verifiable contributor rewards.",
   "type": "module",
   "private": false,
   "license": "MIT",
