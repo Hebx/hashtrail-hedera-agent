@@ -101,6 +101,62 @@ Detailed notes live in
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    U["User<br/>plain-language input"] --> CLI["npm run hashtrail -- ...<br/>src/cli.ts"]
+    CLI --> R{"Intent router<br/>src/agent/hashtrail-agent.ts"}
+
+    R -->|"register alice as 0.0.x"| REG["Address-book register"]
+    R -->|"tip N hbar to alice for ..."| TIP["Tip flow"]
+    R -->|"mint the tiny fun token"| MINT["HTFUN mint"]
+    R -->|"balance / read postcards"| READ["Balance + HCS readback"]
+    R -->|"make me a hashtrail postcard"| POST["Postcard"]
+    R -->|"anything else + LLM key"| FF["Free-form Q&A<br/>src/agent/free-form-agent.ts"]
+    R -->|"anything else + HBL_LLM_PROVIDER=none"| FB["Deterministic fallback<br/>balance + read"]
+
+    subgraph GATES ["Policy gates (write paths only)"]
+        direction LR
+        G1["WEEK1_ALLOW_TIP"]
+        G2["WEEK1_ALLOW_TIP_NFT"]
+        G3["WEEK1_ALLOW_MINT"]
+        G4["HBAR cap (1 HBAR)"]
+        G5["Mainnet enable flag"]
+    end
+
+    TIP --> GATES
+    MINT --> GATES
+    POST --> GATES
+    REG --> GATES
+
+    GATES --> AK["Hedera Agent Kit + SDK<br/>src/hedera/agent-kit.ts"]
+    READ --> AK
+    FB --> AK
+
+    FF --> LLM["LangChain createAgent<br/>Gemini / OpenAI"]
+    LLM --> AKRO["Agent Kit toolkit<br/>read-only get_* tools only"]
+    AKRO --> MIRROR["Hedera Mirror Node"]
+
+    AK --> CHAIN["Hedera testnet / mainnet"]
+    CHAIN --> HBAR[("HBAR transfer")]
+    CHAIN --> HCS[("HCS topic 0.0.x<br/>postcard / address-book / receipt")]
+    CHAIN --> HTS[("HTS Tip Card NFT<br/>HTTIP serial N")]
+
+    HBAR --> SCAN["HashScan<br/>+ mirror-node readback"]
+    HCS --> SCAN
+    HTS --> SCAN
+    MIRROR --> SCAN
+
+    classDef write fill:#fde68a,stroke:#92400e,color:#1f2937
+    classDef read fill:#bfdbfe,stroke:#1e40af,color:#1f2937
+    classDef proof fill:#bbf7d0,stroke:#166534,color:#1f2937
+    class TIP,MINT,POST,REG,AK write
+    class READ,FF,FB,LLM,AKRO,MIRROR read
+    class HBAR,HCS,HTS,SCAN proof
+```
+
+Legend: yellow = write paths gated by policy, blue = read-only paths, green =
+public proof artifacts.
+
 HashTrail is a TypeScript CLI built on:
 
 - `@hashgraph/hedera-agent-kit@4`
@@ -144,6 +200,46 @@ resolves intent in this order:
 7. **Deterministic fallback** (`HBL_LLM_PROVIDER=none`): unrecognized inputs
    return a balance/read response so the CLI never accidentally writes when
    the LLM is disabled.
+
+### Tip Flow Sequence
+
+What happens when the user runs
+`npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"`:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant CLI as CLI / Router
+    participant Policy as Policy Gates
+    participant AK as Agent Kit + SDK
+    participant Hedera as Hedera network
+    participant Mirror as Mirror Node
+    participant Scan as HashScan
+
+    User->>CLI: tip 0.25 hbar to alice for shipping the demo
+    CLI->>CLI: parseTipIntent (regex)
+    CLI->>Mirror: lookup HCS address-book for "alice"
+    Mirror-->>CLI: 0.0.9007632
+    CLI->>Policy: WEEK1_ALLOW_TIP, WEEK1_ALLOW_TIP_NFT, 1 HBAR cap
+    Policy-->>CLI: ok
+    CLI->>AK: transfer 0.25 HBAR -> 0.0.9007632
+    AK->>Hedera: CryptoTransfer
+    Hedera-->>AK: tx 0.0.7304745@...
+    CLI->>AK: ensure HTTIP collection + mint serial N
+    AK->>Hedera: TokenMint
+    Hedera-->>AK: serial N
+    CLI->>AK: transfer NFT serial N -> recipient
+    AK->>Hedera: TokenTransfer
+    Hedera-->>AK: tx 0.0.7304745@...
+    CLI->>AK: submit hashtrail.receipt.v1 to HCS
+    AK->>Hedera: ConsensusSubmitMessage
+    Hedera-->>AK: tx 0.0.7304745@...
+    CLI->>Mirror: readback last messages on topic
+    Mirror-->>CLI: receipt visible
+    CLI-->>User: status=ok + HashScan links
+    Note over Scan: Anyone can verify HBAR, NFT, and HCS receipt
+```
 
 ## Quickstart
 
