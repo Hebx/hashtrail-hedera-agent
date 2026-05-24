@@ -238,4 +238,151 @@ describe("runLiveHashTrailAgent", () => {
     expect(result.latestMessages[0]?.message).toBe("existing postcard");
     expect(result.summary).toContain("read 1 postcard");
   });
+
+  test("routes free-form questions to the free-form agent boundary in agent mode", async () => {
+    let submitCalls = 0;
+    let answeredInput = "";
+    const env = loadEnv({
+      HEDERA_OPERATOR_ID: "0.0.123",
+      HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
+      HBL_LLM_PROVIDER: "gemini",
+      GEMINI_API_KEY: "test-key",
+      HASHTRAIL_HCS_TOPIC_ID: "0.0.777",
+    });
+
+    const result = await runLiveHashTrailAgent({
+      input: "what is the hcs account for the last transactions",
+      env,
+      readbackAttempts: 1,
+      boundaries: {
+        getBalance: async () => "1.00000000 HBAR",
+        hcs: {
+          ensureTopic: async () => "0.0.777",
+          submitPostcard: async () => {
+            submitCalls += 1;
+            return { topicId: "0.0.777" };
+          },
+          readLatest: async () => [],
+        },
+        freeFormAgent: {
+          answer: async (userInput) => {
+            answeredInput = userInput;
+            return {
+              answer:
+                "The HashTrail HCS topic is 0.0.777 and the most recent receipt was 0.0.123@1710000000.000000001.",
+              toolCalls: [
+                {
+                  tool: "get_topic_messages_query_tool",
+                  transactionId: "0.0.123@1710000000.000000001",
+                },
+              ],
+            };
+          },
+        },
+      },
+    });
+
+    expect(submitCalls).toBe(0);
+    expect(answeredInput).toContain("hcs account");
+    expect(result.mode).toBe("agent");
+    expect(result.agentAnswer).toContain("0.0.777");
+    expect(result.agentToolCalls).toEqual([
+      {
+        tool: "get_topic_messages_query_tool",
+        transactionId: "0.0.123@1710000000.000000001",
+      },
+    ]);
+    expect(result.summary).toContain("0.0.777");
+  });
+
+  test("keeps balance/read intent on the deterministic path even when an agent boundary is provided", async () => {
+    let agentCalls = 0;
+    const env = loadEnv({
+      HEDERA_OPERATOR_ID: "0.0.123",
+      HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
+      HBL_LLM_PROVIDER: "gemini",
+      GEMINI_API_KEY: "test-key",
+      HASHTRAIL_HCS_TOPIC_ID: "0.0.777",
+    });
+
+    const result = await runLiveHashTrailAgent({
+      input: "check my balance and read the last 3 postcards",
+      env,
+      readbackAttempts: 1,
+      boundaries: {
+        getBalance: async () => "1.00000000 HBAR",
+        hcs: {
+          ensureTopic: async () => "0.0.777",
+          submitPostcard: async () => ({ topicId: "0.0.777" }),
+          readLatest: async () => [],
+        },
+        freeFormAgent: {
+          answer: async () => {
+            agentCalls += 1;
+            return { answer: "should not run", toolCalls: [] };
+          },
+        },
+      },
+    });
+
+    expect(agentCalls).toBe(0);
+    expect(result.mode).toBe("live");
+    expect(result.summary).toContain("read 0 postcards");
+  });
+
+  test("does not trigger a token mint when the user only asks a question that mentions the word 'token'", async () => {
+    let mintCalls = 0;
+    let agentCalls = 0;
+    const env = loadEnv({
+      HEDERA_OPERATOR_ID: "0.0.123",
+      HEDERA_OPERATOR_KEY: "302e020100300506032b657004220420abc",
+      HBL_LLM_PROVIDER: "gemini",
+      GEMINI_API_KEY: "test-key",
+      WEEK1_ALLOW_MINT: "true",
+      HASHTRAIL_HCS_TOPIC_ID: "0.0.777",
+    });
+
+    const result = await runLiveHashTrailAgent({
+      input: "look up token info for 0.0.9007634 and tell me the symbol",
+      env,
+      readbackAttempts: 1,
+      boundaries: {
+        getBalance: async () => "1.00000000 HBAR",
+        hcs: {
+          ensureTopic: async () => "0.0.777",
+          submitPostcard: async () => ({ topicId: "0.0.777" }),
+          readLatest: async () => [],
+        },
+        hts: {
+          ensureToken: async () => ({
+            tokenId: "0.0.999",
+            created: false,
+          }),
+          mintTinyToken: async () => {
+            mintCalls += 1;
+            return { tokenId: "0.0.999", amount: 1 };
+          },
+        },
+        freeFormAgent: {
+          answer: async () => {
+            agentCalls += 1;
+            return {
+              answer: "Token 0.0.9007634 has symbol HTTIP and total supply 1.",
+              toolCalls: [
+                {
+                  tool: "get_token_info_query_tool",
+                  transactionId: undefined,
+                },
+              ],
+            };
+          },
+        },
+      },
+    });
+
+    expect(mintCalls).toBe(0);
+    expect(agentCalls).toBe(1);
+    expect(result.mode).toBe("agent");
+    expect(result.agentAnswer).toContain("HTTIP");
+  });
 });

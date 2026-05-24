@@ -38,6 +38,17 @@ function printHashTrailResult(result: HashTrailResult, env: HashTrailEnv): void 
   for (const [index, message] of result.latestMessages.entries()) {
     console.log(`${index + 1}. ${message.message}`);
   }
+  if (result.agentAnswer) {
+    console.log("agent answer:");
+    console.log(result.agentAnswer);
+  }
+  if (result.agentToolCalls && result.agentToolCalls.length > 0) {
+    console.log("agent tool calls:");
+    for (const call of result.agentToolCalls) {
+      const tx = call.transactionId ? ` tx=${call.transactionId}` : "";
+      console.log(`- ${call.tool}${tx}`);
+    }
+  }
   console.log(result.summary);
 
   const hashScanLinks = buildHashScanLinks({

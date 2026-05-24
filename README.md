@@ -78,6 +78,11 @@ Detailed notes live in
 
 - **Plain-language commands:** run postcard, balance, mint, registry, and tip
   workflows from one CLI.
+- **Free-form Hedera Q&A:** when an LLM is configured, any question that does
+  not match a deterministic command routes to a Hedera Agent Kit ReAct agent
+  with read-only query tools (HBAR balance, account info, topic info, topic
+  messages, token info, transaction record, exchange rate). Same input,
+  deterministic command path; new question, agent path.
 - **HCS receipts:** writes `hashtrail.postcard.v1`,
   `hashtrail.address-book.v1`, and `hashtrail.receipt.v1` records.
 - **Contributor aliases:** resolve `alice` from HCS address-book receipts before
@@ -91,9 +96,66 @@ Detailed notes live in
 - **Mainnet guard:** `HEDERA_NETWORK=mainnet` only works when
   `HASHTRAIL_ENABLE_MAINNET=true`.
 - **Deterministic mode:** `HBL_LLM_PROVIDER=none` runs the command parser
-  without an LLM key.
+  without an LLM key. Free-form Q&A is disabled and unrecognized inputs fall
+  back to a balance/read response.
 
 ## Architecture
+
+```mermaid
+flowchart TD
+    U["User<br/>plain-language input"] --> CLI["npm run hashtrail -- ...<br/>src/cli.ts"]
+    CLI --> R{"Intent router<br/>src/agent/hashtrail-agent.ts"}
+
+    R -->|"register alice as 0.0.x"| REG["Address-book register"]
+    R -->|"tip N hbar to alice for ..."| TIP["Tip flow"]
+    R -->|"mint the tiny fun token"| MINT["HTFUN mint"]
+    R -->|"balance / read postcards"| READ["Balance + HCS readback"]
+    R -->|"make me a hashtrail postcard"| POST["Postcard"]
+    R -->|"anything else + LLM key"| FF["Free-form Q&A<br/>src/agent/free-form-agent.ts"]
+    R -->|"anything else + HBL_LLM_PROVIDER=none"| FB["Deterministic fallback<br/>balance + read"]
+
+    subgraph GATES ["Policy gates (write paths only)"]
+        direction LR
+        G1["WEEK1_ALLOW_TIP"]
+        G2["WEEK1_ALLOW_TIP_NFT"]
+        G3["WEEK1_ALLOW_MINT"]
+        G4["HBAR cap (1 HBAR)"]
+        G5["Mainnet enable flag"]
+    end
+
+    TIP --> GATES
+    MINT --> GATES
+    POST --> GATES
+    REG --> GATES
+
+    GATES --> AK["Hedera Agent Kit + SDK<br/>src/hedera/agent-kit.ts"]
+    READ --> AK
+    FB --> AK
+
+    FF --> LLM["LangChain createAgent<br/>Gemini / OpenAI"]
+    LLM --> AKRO["Agent Kit toolkit<br/>read-only get_* tools only"]
+    AKRO --> MIRROR["Hedera Mirror Node"]
+
+    AK --> CHAIN["Hedera testnet / mainnet"]
+    CHAIN --> HBAR[("HBAR transfer")]
+    CHAIN --> HCS[("HCS topic 0.0.x<br/>postcard / address-book / receipt")]
+    CHAIN --> HTS[("HTS Tip Card NFT<br/>HTTIP serial N")]
+
+    HBAR --> SCAN["HashScan<br/>+ mirror-node readback"]
+    HCS --> SCAN
+    HTS --> SCAN
+    MIRROR --> SCAN
+
+    classDef write fill:#fde68a,stroke:#92400e,color:#1f2937
+    classDef read fill:#bfdbfe,stroke:#1e40af,color:#1f2937
+    classDef proof fill:#bbf7d0,stroke:#166534,color:#1f2937
+    class TIP,MINT,POST,REG,AK write
+    class READ,FF,FB,LLM,AKRO,MIRROR read
+    class HBAR,HCS,HTS,SCAN proof
+```
+
+Legend: yellow = write paths gated by policy, blue = read-only paths, green =
+public proof artifacts.
 
 HashTrail is a TypeScript CLI built on:
 
@@ -109,6 +171,9 @@ Agent Kit plugins:
 - `coreConsensusPlugin`
 - `coreConsensusQueryPlugin`
 - `coreTokenPlugin`
+- `coreTokenQueryPlugin`
+- `coreTransactionQueryPlugin`
+- `coreMiscQueriesPlugin`
 
 The Agent Kit boundary is in
 [`src/hedera/agent-kit.ts`](src/hedera/agent-kit.ts). It wires three local
@@ -119,6 +184,62 @@ controls:
 - `HashTrailHbarCapPolicy`: denies normalized HBAR amounts above 1 HBAR.
 - `HashTrailAuditLogHook`: emits structured JSON audit lines after tool
   execution.
+
+The top-level router in [`src/agent/hashtrail-agent.ts`](src/agent/hashtrail-agent.ts)
+resolves intent in this order:
+
+1. **Address book registration** (`register alice as 0.0.x`).
+2. **Tip** (`tip 0.25 hbar to alice for ...`), gated by `WEEK1_ALLOW_TIP` and
+   the 1 HBAR cap.
+3. **Mint** (`mint the tiny fun token`), gated by `WEEK1_ALLOW_MINT`.
+4. **Balance / read** (`check my balance and read the last 3 postcards`).
+5. **Explicit postcard** (`make me a hashtrail postcard`).
+6. **Free-form Q&A** through the Hedera Agent Kit ReAct agent in
+   [`src/agent/free-form-agent.ts`](src/agent/free-form-agent.ts) when an LLM
+   provider is configured. Read-only tools only.
+7. **Deterministic fallback** (`HBL_LLM_PROVIDER=none`): unrecognized inputs
+   return a balance/read response so the CLI never accidentally writes when
+   the LLM is disabled.
+
+### Tip Flow Sequence
+
+What happens when the user runs
+`npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"`:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant CLI as CLI / Router
+    participant Policy as Policy Gates
+    participant AK as Agent Kit + SDK
+    participant Hedera as Hedera network
+    participant Mirror as Mirror Node
+    participant Scan as HashScan
+
+    User->>CLI: tip 0.25 hbar to alice for shipping the demo
+    CLI->>CLI: parseTipIntent (regex)
+    CLI->>Mirror: lookup HCS address-book for "alice"
+    Mirror-->>CLI: 0.0.9007632
+    CLI->>Policy: WEEK1_ALLOW_TIP, WEEK1_ALLOW_TIP_NFT, 1 HBAR cap
+    Policy-->>CLI: ok
+    CLI->>AK: transfer 0.25 HBAR -> 0.0.9007632
+    AK->>Hedera: CryptoTransfer
+    Hedera-->>AK: tx 0.0.7304745@...
+    CLI->>AK: ensure HTTIP collection + mint serial N
+    AK->>Hedera: TokenMint
+    Hedera-->>AK: serial N
+    CLI->>AK: transfer NFT serial N -> recipient
+    AK->>Hedera: TokenTransfer
+    Hedera-->>AK: tx 0.0.7304745@...
+    CLI->>AK: submit hashtrail.receipt.v1 to HCS
+    AK->>Hedera: ConsensusSubmitMessage
+    Hedera-->>AK: tx 0.0.7304745@...
+    CLI->>Mirror: readback last messages on topic
+    Mirror-->>CLI: receipt visible
+    CLI-->>User: status=ok + HashScan links
+    Note over Scan: Anyone can verify HBAR, NFT, and HCS receipt
+```
 
 ## Quickstart
 
@@ -254,6 +375,21 @@ Tip a contributor and mint a Tip Card NFT:
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
+Ask free-form questions about the live Hedera state (LLM provider must be set):
+
+```bash
+npm run hashtrail -- "what is the hcs topic id for the last transactions and show me the last 3 messages"
+npm run hashtrail -- "look up token info for 0.0.9007634 and tell me the name, symbol, and total supply"
+```
+
+The agent runs in read-only Q&A mode and only calls Hedera Agent Kit query
+tools (`get_hbar_balance_query_tool`, `get_account_query_tool`,
+`get_topic_messages_query_tool`, `get_token_info_query_tool`,
+`get_transaction_record_query_tool`, `get_exchange_rate_tool`, ...). Write
+actions (postcard, register, mint, tip, NFT) only fire on the deterministic
+command paths above, so the same command keeps producing the same on-chain
+receipt regardless of the LLM provider.
+
 The tip command accepts a published alias, a local fallback alias, or a raw
 `0.0.x` account id.
 
@@ -305,6 +441,9 @@ HashTrail is intentionally narrow and guarded:
 - NFT metadata URIs must be `ipfs://`, `ar://`, or `https://` and fit Hedera's
   100-byte serial metadata limit.
 - Readback commands reuse pinned topic/token IDs instead of creating new objects.
+- Free-form Q&A only exposes Hedera Agent Kit `get_*` query tools to the LLM.
+  Write actions (postcard, register, mint, tip, NFT) only fire on the
+  deterministic command paths, so the LLM cannot bypass the policy gates.
 - Secrets and generated keys are gitignored.
 
 If a recipient cannot accept the NFT, the HBAR tip can still complete. HashTrail
