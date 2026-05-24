@@ -78,6 +78,11 @@ Detailed notes live in
 
 - **Plain-language commands:** run postcard, balance, mint, registry, and tip
   workflows from one CLI.
+- **Free-form Hedera Q&A:** when an LLM is configured, any question that does
+  not match a deterministic command routes to a Hedera Agent Kit ReAct agent
+  with read-only query tools (HBAR balance, account info, topic info, topic
+  messages, token info, transaction record, exchange rate). Same input,
+  deterministic command path; new question, agent path.
 - **HCS receipts:** writes `hashtrail.postcard.v1`,
   `hashtrail.address-book.v1`, and `hashtrail.receipt.v1` records.
 - **Contributor aliases:** resolve `alice` from HCS address-book receipts before
@@ -91,7 +96,8 @@ Detailed notes live in
 - **Mainnet guard:** `HEDERA_NETWORK=mainnet` only works when
   `HASHTRAIL_ENABLE_MAINNET=true`.
 - **Deterministic mode:** `HBL_LLM_PROVIDER=none` runs the command parser
-  without an LLM key.
+  without an LLM key. Free-form Q&A is disabled and unrecognized inputs fall
+  back to a balance/read response.
 
 ## Architecture
 
@@ -109,6 +115,9 @@ Agent Kit plugins:
 - `coreConsensusPlugin`
 - `coreConsensusQueryPlugin`
 - `coreTokenPlugin`
+- `coreTokenQueryPlugin`
+- `coreTransactionQueryPlugin`
+- `coreMiscQueriesPlugin`
 
 The Agent Kit boundary is in
 [`src/hedera/agent-kit.ts`](src/hedera/agent-kit.ts). It wires three local
@@ -119,6 +128,22 @@ controls:
 - `HashTrailHbarCapPolicy`: denies normalized HBAR amounts above 1 HBAR.
 - `HashTrailAuditLogHook`: emits structured JSON audit lines after tool
   execution.
+
+The top-level router in [`src/agent/hashtrail-agent.ts`](src/agent/hashtrail-agent.ts)
+resolves intent in this order:
+
+1. **Address book registration** (`register alice as 0.0.x`).
+2. **Tip** (`tip 0.25 hbar to alice for ...`), gated by `WEEK1_ALLOW_TIP` and
+   the 1 HBAR cap.
+3. **Mint** (`mint the tiny fun token`), gated by `WEEK1_ALLOW_MINT`.
+4. **Balance / read** (`check my balance and read the last 3 postcards`).
+5. **Explicit postcard** (`make me a hashtrail postcard`).
+6. **Free-form Q&A** through the Hedera Agent Kit ReAct agent in
+   [`src/agent/free-form-agent.ts`](src/agent/free-form-agent.ts) when an LLM
+   provider is configured. Read-only tools only.
+7. **Deterministic fallback** (`HBL_LLM_PROVIDER=none`): unrecognized inputs
+   return a balance/read response so the CLI never accidentally writes when
+   the LLM is disabled.
 
 ## Quickstart
 
@@ -254,6 +279,21 @@ Tip a contributor and mint a Tip Card NFT:
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
+Ask free-form questions about the live Hedera state (LLM provider must be set):
+
+```bash
+npm run hashtrail -- "what is the hcs topic id for the last transactions and show me the last 3 messages"
+npm run hashtrail -- "look up token info for 0.0.9007634 and tell me the name, symbol, and total supply"
+```
+
+The agent runs in read-only Q&A mode and only calls Hedera Agent Kit query
+tools (`get_hbar_balance_query_tool`, `get_account_query_tool`,
+`get_topic_messages_query_tool`, `get_token_info_query_tool`,
+`get_transaction_record_query_tool`, `get_exchange_rate_tool`, ...). Write
+actions (postcard, register, mint, tip, NFT) only fire on the deterministic
+command paths above, so the same command keeps producing the same on-chain
+receipt regardless of the LLM provider.
+
 The tip command accepts a published alias, a local fallback alias, or a raw
 `0.0.x` account id.
 
@@ -305,6 +345,9 @@ HashTrail is intentionally narrow and guarded:
 - NFT metadata URIs must be `ipfs://`, `ar://`, or `https://` and fit Hedera's
   100-byte serial metadata limit.
 - Readback commands reuse pinned topic/token IDs instead of creating new objects.
+- Free-form Q&A only exposes Hedera Agent Kit `get_*` query tools to the LLM.
+  Write actions (postcard, register, mint, tip, NFT) only fire on the
+  deterministic command paths, so the LLM cannot bypass the policy gates.
 - Secrets and generated keys are gitignored.
 
 If a recipient cannot accept the NFT, the HBAR tip can still complete. HashTrail

@@ -30,7 +30,7 @@ export type HashTrailPostcard = {
 
 export type HashTrailResult = {
   status: "ok" | "denied";
-  mode: "live";
+  mode: "live" | "agent";
   topicId: string;
   balance: string;
   postcard: HashTrailPostcard;
@@ -42,6 +42,13 @@ export type HashTrailResult = {
   tipNft?: NftTransferReceipt;
   tipReceipt?: TipReceiptV1;
   summary: string;
+  agentAnswer?: string;
+  agentToolCalls?: AgentToolCall[];
+};
+
+export type AgentToolCall = {
+  tool: string;
+  transactionId?: string;
 };
 
 export type TipExecution = {

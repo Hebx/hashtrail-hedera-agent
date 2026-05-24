@@ -13,8 +13,11 @@ import {
   coreAccountQueryPlugin,
   coreConsensusPlugin,
   coreConsensusQueryPlugin,
+  coreMiscQueriesPlugin,
   coreTokenPlugin,
   coreTokenPluginToolNames,
+  coreTokenQueryPlugin,
+  coreTransactionQueryPlugin,
   TRANSFER_HBAR_TOOL,
   TRANSFER_HBAR_WITH_ALLOWANCE_TOOL,
 } from "@hashgraph/hedera-agent-kit/plugins";
@@ -32,6 +35,9 @@ export const hashTrailPlugins: Plugin[] = [
   coreConsensusPlugin,
   coreConsensusQueryPlugin,
   coreTokenPlugin,
+  coreTokenQueryPlugin,
+  coreTransactionQueryPlugin,
+  coreMiscQueriesPlugin,
 ];
 
 class HashTrailMintAllowlistPolicy extends AbstractPolicy {

@@ -18,6 +18,7 @@ import {
   type ResolvedRecipient,
 } from "./recipients.js";
 import { parseTipIntent } from "./tip-jar.js";
+import { createFreeFormAgent, type FreeFormAgentBoundary } from "./free-form-agent.js";
 import type {
   HashTrailEnv,
   HashTrailPostcard,
@@ -35,20 +36,26 @@ export type HashTrailLiveBoundaries = {
   hts?: HtsLiveBoundary;
   nft?: NftLiveBoundary;
   tip?: TipLiveBoundary;
+  freeFormAgent?: FreeFormAgentBoundary;
 };
 
 function wantsMint(input: string): boolean {
-  return /\bmint|token\b/i.test(input);
+  return /\b(mint|create)\b[^.?!]*\b(token|htfun)\b/i.test(input);
+}
+
+function wantsBalanceOrRead(input: string): boolean {
+  return (
+    /\bread|latest|check\s+my\s+balance|balance\b/i.test(input) &&
+    !/\b(make|create|post|submit|write)\b/i.test(input)
+  );
 }
 
 function wantsPostcardWrite(input: string): boolean {
-  if (
-    /\bread|latest|check\s+my\s+balance|balance\b/i.test(input) &&
-    !/\b(make|create|post|submit|write)\b/i.test(input)
-  ) {
+  if (wantsBalanceOrRead(input)) {
     return false;
   }
-  return true;
+  return /\b(postcard|hashtrail)\b/i.test(input) &&
+    /\b(make|create|post|submit|write)\b/i.test(input);
 }
 
 function buildPostcard(env: HashTrailEnv): HashTrailPostcard {
@@ -295,6 +302,34 @@ export async function runLiveHashTrailAgent(input: {
   }
 
   if (!wantsPostcardWrite(input.input)) {
+    if (input.boundaries.freeFormAgent && !wantsBalanceOrRead(input.input)) {
+      const agentOutput = await input.boundaries.freeFormAgent.answer(input.input);
+      const latestMessages = await readLatestWithRetry(input);
+      const txSummary = agentOutput.toolCalls
+        .map((call) =>
+          call.transactionId
+            ? `${call.tool}=${call.transactionId}`
+            : call.tool,
+        )
+        .join(", ");
+      const summary = agentOutput.answer.trim().length > 0
+        ? agentOutput.answer.trim()
+        : `HashTrail free-form agent answered the question${
+            txSummary ? ` (${txSummary})` : ""
+          }.`;
+      return {
+        status: "ok",
+        mode: "agent",
+        topicId,
+        balance,
+        postcard,
+        latestMessages,
+        summary,
+        agentAnswer: agentOutput.answer,
+        agentToolCalls: agentOutput.toolCalls,
+      };
+    }
+
     const latestMessages = await readLatestWithRetry(input);
     const noun = latestMessages.length === 1 ? "postcard" : "postcards";
     return {
@@ -361,6 +396,14 @@ export async function runHashTrailAgent(input: {
 }): Promise<HashTrailResult> {
   const client = buildHederaClient(input.env);
   try {
+    const freeFormAgent =
+      input.env.llmProvider !== "none"
+        ? createFreeFormAgent({
+            client,
+            env: input.env,
+            topicId: input.env.hcsTopicId,
+          }) ?? undefined
+        : undefined;
     return await runLiveHashTrailAgent({
       ...input,
       boundaries: {
@@ -369,6 +412,7 @@ export async function runHashTrailAgent(input: {
         hts: createLiveHtsBoundary({ client, env: input.env }),
         nft: createLiveNftBoundary({ client, env: input.env }),
         tip: createLiveTipBoundary({ client, env: input.env }),
+        freeFormAgent,
       },
       recipients: input.recipients,
     });
