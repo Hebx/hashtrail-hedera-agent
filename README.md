@@ -3,101 +3,42 @@
 HashTrail is a Hedera receipt agent for verifiable contributor rewards.
 
 Give it a plain-language instruction such as `tip 0.25 hbar to alice for
-shipping the demo`, and it turns that intent into a public proof trail:
+shipping the demo` and it leaves a public proof trail: an HBAR transfer, an
+HCS receipt, an optional HTS Tip Card NFT, and HashScan links for every
+on-chain object.
 
-- an HBAR transfer
-- an HCS receipt message
-- optional HTS proof-token minting
-- an optional wallet-renderable Tip Card NFT
-- HashScan links for every public object
-- policy logs around the agent tools that can spend or mint
+The design goal is simple: an AI agent should not just *claim* it completed
+a payment. It should leave a receipt anyone can inspect later.
 
-The design goal is simple: an AI agent should not only say it completed an
-action. It should leave a receipt that people can inspect later.
-
-## User Story
-
-As a community organizer, hackathon operator, DAO contributor, or small project
-lead, I want to reward contributors with a simple AI command so each payment has
-a public, readable receipt showing who was paid, why they were paid, and which
-on-chain actions completed.
-
-## Use Case: Verifiable Contributor Rewards
-
-Small teams often reward work with a Discord message, spreadsheet row, wallet
-transfer, or manual note. Those records are easy to lose and hard to audit.
-
-HashTrail turns that workflow into a lightweight proof trail:
-
-- **Actor:** a team lead, DAO operator, hackathon organizer, or community admin
-- **Recipient:** a contributor, demo builder, reviewer, or helpful community
-  member
-- **Action:** send a small HBAR tip and issue a Tip Card NFT
-- **Record:** write a public HCS receipt that includes the intent, payment, NFT
-  outcome, timestamp, recipient registry, and transaction ids
-- **Result:** anyone can later check HashScan or mirror-node data and verify the
-  reward happened on Hedera
-
-This is not a payroll system or a DAO treasury. It is a narrow production agent:
-AI intent in, Hedera receipts out.
+This is not a payroll system or a treasury product. It is a narrow agent for
+small teams, hackathon operators, DAO contributors, and community admins who
+want an auditable "I paid this person for that work" trail.
 
 ## Live Mainnet Proof
 
 HashTrail has completed a real mainnet run with a renderable `HTTIP` NFT.
 
-- Mainnet operator: `0.0.10489896`
-- Recipient / NFT owner: `0.0.10231006`
-- HCS topic: `0.0.10489911`
-- Tip Card NFT collection: `0.0.10489912`
-- Tip Card serial: `1`
-- Metadata URI:
-  `ipfs://bafkreiblekqyyf6di5ksmwyr45aoopvrbzxbunhywbm7ffnh4zcdeqcifi`
-- HBAR tip transaction: `0.0.10489896@1779477337.887190474`
-- NFT mint transaction: `0.0.10489896@1779477432.744595352`
-- NFT transfer transaction: `0.0.10489896@1779477440.269786908`
-- HCS receipt transaction: `0.0.10489896@1779477441.554100712`
+| Object               | ID                                                    |
+| -------------------- | ----------------------------------------------------- |
+| Operator             | `0.0.10489896`                                        |
+| Recipient / NFT owner| `0.0.10231006`                                        |
+| HCS topic            | `0.0.10489911`                                        |
+| Tip Card collection  | `0.0.10489912` (serial `1`)                           |
+| HBAR tip tx          | `0.0.10489896@1779477337.887190474`                   |
+| NFT mint tx          | `0.0.10489896@1779477432.744595352`                   |
+| NFT transfer tx      | `0.0.10489896@1779477440.269786908`                   |
+| HCS receipt tx       | `0.0.10489896@1779477441.554100712`                   |
+| Metadata             | `ipfs://bafkreiblekqyyf6di5ksmwyr45aoopvrbzxbunhywbm7ffnh4zcdeqcifi` |
 
-HashScan:
+Browse on HashScan: [topic](https://hashscan.io/mainnet/topic/0.0.10489911) ·
+[NFT collection](https://hashscan.io/mainnet/token/0.0.10489912) ·
+[HBAR tip](https://hashscan.io/mainnet/tx/0.0.10489896@1779477337.887190474) ·
+[HCS receipt](https://hashscan.io/mainnet/tx/0.0.10489896@1779477441.554100712) ·
+[metadata JSON](https://ipfs.io/ipfs/bafkreiblekqyyf6di5ksmwyr45aoopvrbzxbunhywbm7ffnh4zcdeqcifi).
 
-- [Mainnet operator](https://hashscan.io/mainnet/account/0.0.10489896)
-- [Recipient wallet](https://hashscan.io/mainnet/account/0.0.10231006)
-- [HCS topic](https://hashscan.io/mainnet/topic/0.0.10489911)
-- [Tip Card NFT collection](https://hashscan.io/mainnet/token/0.0.10489912)
-- [HBAR tip](https://hashscan.io/mainnet/tx/0.0.10489896@1779477337.887190474)
-- [NFT mint](https://hashscan.io/mainnet/tx/0.0.10489896@1779477432.744595352)
-- [NFT transfer](https://hashscan.io/mainnet/tx/0.0.10489896@1779477440.269786908)
-- [HCS receipt](https://hashscan.io/mainnet/tx/0.0.10489896@1779477441.554100712)
-- [Metadata JSON](https://ipfs.io/ipfs/bafkreiblekqyyf6di5ksmwyr45aoopvrbzxbunhywbm7ffnh4zcdeqcifi)
-
-Mirror node confirmed that token `0.0.10489912` serial `1` is owned by
-`0.0.10231006`, and that the serial metadata decodes to the IPFS URI above.
-Detailed notes live in
-[`submission/mainnet-readiness.md`](submission/mainnet-readiness.md).
-
-## Core Features
-
-- **Plain-language commands:** run postcard, balance, mint, registry, and tip
-  workflows from one CLI.
-- **Free-form Hedera Q&A:** when an LLM is configured, any question that does
-  not match a deterministic command routes to a Hedera Agent Kit ReAct agent
-  with read-only query tools (HBAR balance, account info, topic info, topic
-  messages, token info, transaction record, exchange rate). Same input,
-  deterministic command path; new question, agent path.
-- **HCS receipts:** writes `hashtrail.postcard.v1`,
-  `hashtrail.address-book.v1`, and `hashtrail.receipt.v1` records.
-- **Contributor aliases:** resolve `alice` from HCS address-book receipts before
-  falling back to local `recipients.json`.
-- **HBAR tips:** guarded by explicit opt-in flags and a 1 HBAR Agent Kit policy
-  cap.
-- **Tip Card NFTs:** creates or reuses an `HTTIP` collection, mints a serial,
-  and transfers it to the recipient when the wallet can receive it.
-- **Renderable metadata:** supports HIP-412 metadata URIs through
-  `HASHTRAIL_TIP_CARD_METADATA_URI`.
-- **Mainnet guard:** `HEDERA_NETWORK=mainnet` only works when
-  `HASHTRAIL_ENABLE_MAINNET=true`.
-- **Deterministic mode:** `HBL_LLM_PROVIDER=none` runs the command parser
-  without an LLM key. Free-form Q&A is disabled and unrecognized inputs fall
-  back to a balance/read response.
+Mirror node confirmed serial `1` of `0.0.10489912` is owned by
+`0.0.10231006` and the serial metadata decodes to the IPFS URI above. Operator
+notes live in [`submission/mainnet-readiness.md`](submission/mainnet-readiness.md).
 
 ## Architecture
 
@@ -154,54 +95,24 @@ flowchart TD
     class HBAR,HCS,HTS,SCAN proof
 ```
 
-Legend: yellow = write paths gated by policy, blue = read-only paths, green =
-public proof artifacts.
+Yellow paths are gated writes. Blue paths are read-only. Green nodes are the
+public artifacts anyone can verify.
 
-HashTrail is a TypeScript CLI built on:
+The router in [`src/agent/hashtrail-agent.ts`](src/agent/hashtrail-agent.ts)
+resolves intent in this order: address-book register → tip → mint → balance/read
+→ explicit postcard → free-form Q&A (LLM configured) → deterministic balance/read
+fallback (`HBL_LLM_PROVIDER=none`). The Agent Kit boundary lives in
+[`src/hedera/agent-kit.ts`](src/hedera/agent-kit.ts) and wires three local
+controls onto every Agent Kit tool call: a mint allowlist, a 1 HBAR transfer
+cap, and a JSON audit-log hook.
 
-- `@hashgraph/hedera-agent-kit@4`
-- `@hashgraph/hedera-agent-kit-langchain`
-- `@hiero-ledger/sdk`
-- LangChain with Gemini or OpenAI adapters
-- Hedera Mirror Node APIs for readback
+Stack: `@hashgraph/hedera-agent-kit@4`, `@hashgraph/hedera-agent-kit-langchain`,
+`@hiero-ledger/sdk`, LangChain (Gemini or OpenAI adapters), and the Hedera
+mirror node for readback. Toolkit plugins: `coreAccountQueryPlugin`,
+`coreConsensusPlugin`, `coreConsensusQueryPlugin`, `coreTokenPlugin`,
+`coreTokenQueryPlugin`, `coreTransactionQueryPlugin`, `coreMiscQueriesPlugin`.
 
-Agent Kit plugins:
-
-- `coreAccountQueryPlugin`
-- `coreConsensusPlugin`
-- `coreConsensusQueryPlugin`
-- `coreTokenPlugin`
-- `coreTokenQueryPlugin`
-- `coreTransactionQueryPlugin`
-- `coreMiscQueriesPlugin`
-
-The Agent Kit boundary is in
-[`src/hedera/agent-kit.ts`](src/hedera/agent-kit.ts). It wires three local
-controls:
-
-- `HashTrailMintAllowlistPolicy`: denies token create/mint unless
-  `WEEK1_ALLOW_MINT=true`.
-- `HashTrailHbarCapPolicy`: denies normalized HBAR amounts above 1 HBAR.
-- `HashTrailAuditLogHook`: emits structured JSON audit lines after tool
-  execution.
-
-The top-level router in [`src/agent/hashtrail-agent.ts`](src/agent/hashtrail-agent.ts)
-resolves intent in this order:
-
-1. **Address book registration** (`register alice as 0.0.x`).
-2. **Tip** (`tip 0.25 hbar to alice for ...`), gated by `WEEK1_ALLOW_TIP` and
-   the 1 HBAR cap.
-3. **Mint** (`mint the tiny fun token`), gated by `WEEK1_ALLOW_MINT`.
-4. **Balance / read** (`check my balance and read the last 3 postcards`).
-5. **Explicit postcard** (`make me a hashtrail postcard`).
-6. **Free-form Q&A** through the Hedera Agent Kit ReAct agent in
-   [`src/agent/free-form-agent.ts`](src/agent/free-form-agent.ts) when an LLM
-   provider is configured. Read-only tools only.
-7. **Deterministic fallback** (`HBL_LLM_PROVIDER=none`): unrecognized inputs
-   return a balance/read response so the CLI never accidentally writes when
-   the LLM is disabled.
-
-### Tip Flow Sequence
+### Tip flow sequence
 
 What happens when the user runs
 `npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"`:
@@ -243,42 +154,18 @@ sequenceDiagram
 
 ## Quickstart
 
-Requirements:
-
-- Node.js `>=20`
-- A Hedera testnet or mainnet operator account
-- Optional Gemini or OpenAI API key for LLM parsing
-
-Install:
+Requirements: Node.js `>=20`, a Hedera testnet operator account, and
+optionally a Gemini or OpenAI API key for free-form Q&A.
 
 ```bash
 npm install
 cp .env.example .env
-```
-
-Run checks:
-
-```bash
-npm run typecheck
-npm run lint
-npm test -- --run
-npm run build
-```
-
-Run a deterministic postcard without an LLM:
-
-```dotenv
-HBL_LLM_PROVIDER=none
-HBL_LLM_MODEL=none
-```
-
-```bash
+# fill in HEDERA_OPERATOR_ID, HEDERA_OPERATOR_KEY, optional GEMINI_API_KEY
+npm run typecheck && npm run lint && npm test -- --run && npm run build
 npm run hashtrail -- "make me a hashtrail postcard"
 ```
 
-## Environment
-
-Testnet shape:
+A minimal testnet `.env`:
 
 ```dotenv
 HEDERA_NETWORK=testnet
@@ -287,6 +174,7 @@ HEDERA_OPERATOR_ID=0.0.xxxxx
 HEDERA_OPERATOR_KEY=REPLACE_ME
 HEDERA_MIRROR_NODE_URL=https://testnet.mirrornode.hedera.com
 
+# Set HBL_LLM_PROVIDER=none to disable free-form Q&A and run deterministic-only.
 HBL_LLM_PROVIDER=gemini
 HBL_LLM_MODEL=gemini-2.5-flash
 GEMINI_API_KEY=REPLACE_ME
@@ -302,152 +190,88 @@ WEEK1_ALLOW_TIP=true
 WEEK1_ALLOW_TIP_NFT=true
 ```
 
-Mainnet shape:
-
-```dotenv
-HEDERA_NETWORK=mainnet
-HASHTRAIL_ENABLE_MAINNET=true
-HEDERA_OPERATOR_ID=0.0.xxxxx
-HEDERA_OPERATOR_KEY=REPLACE_ME
-HEDERA_MIRROR_NODE_URL=https://mainnet-public.mirrornode.hedera.com
-
-HBL_LLM_PROVIDER=none
-HBL_LLM_MODEL=none
-
-HASHTRAIL_DISPLAY_NAME=ihab
-HASHTRAIL_HCS_TOPIC_ID=
-HASHTRAIL_HTS_TOKEN_ID=
-HASHTRAIL_NFT_TOKEN_ID=
-HASHTRAIL_TIP_CARD_METADATA_URI=ipfs://REPLACE_WITH_METADATA_CID
-
-WEEK1_ALLOW_MINT=false
-WEEK1_ALLOW_TIP=true
-WEEK1_ALLOW_TIP_NFT=true
-```
-
-For mainnet, keep IDs network-specific. Do not reuse testnet
-`HASHTRAIL_HCS_TOPIC_ID`, `HASHTRAIL_HTS_TOKEN_ID`, or
-`HASHTRAIL_NFT_TOKEN_ID` values in a mainnet run.
+For mainnet, also set `HEDERA_NETWORK=mainnet`,
+`HASHTRAIL_ENABLE_MAINNET=true`, the mainnet mirror node URL, and never reuse
+testnet topic/token IDs. Operational walkthrough lives in
+[`submission/mainnet-readiness.md`](submission/mainnet-readiness.md).
 
 Never commit `.env`, `.local/`, or generated recipient keys.
 
 ## Commands
 
-Post a receipt postcard:
+Deterministic write commands (gated by the policy flags):
 
 ```bash
 npm run hashtrail -- "make me a hashtrail postcard"
-```
-
-Check balance and read recent HCS messages:
-
-```bash
 npm run hashtrail -- "check my balance and read the last 3 postcards"
-```
-
-Create or reuse the optional `HTFUN` proof token:
-
-```bash
 npm run hashtrail -- "mint the tiny fun token"
-```
-
-Create a recipient account for demos:
-
-```bash
-npm run hashtrail -- recipients create alice --note "demo recipient"
-```
-
-Add an existing Hedera account to the local address book:
-
-```bash
-npm run hashtrail -- recipients add alice 0.0.xxxxx --note "demo recipient"
-```
-
-Publish the alias as an HCS address-book receipt:
-
-```bash
-npm run hashtrail -- recipients publish alice
-```
-
-Tip a contributor and mint a Tip Card NFT:
-
-```bash
 npm run hashtrail -- "tip 0.25 hbar to alice for shipping the demo"
 ```
 
-Ask free-form questions about the live Hedera state (LLM provider must be set):
+Address-book management:
+
+```bash
+npm run hashtrail -- recipients create alice --note "demo recipient"
+npm run hashtrail -- recipients add alice 0.0.xxxxx --note "demo recipient"
+npm run hashtrail -- recipients publish alice
+```
+
+The tip command accepts a published HCS alias, a local `recipients.json`
+fallback alias, or a raw `0.0.x` account id.
+
+Free-form Q&A (requires `HBL_LLM_PROVIDER=gemini` or `openai`):
 
 ```bash
 npm run hashtrail -- "what is the hcs topic id for the last transactions and show me the last 3 messages"
 npm run hashtrail -- "look up token info for 0.0.9007634 and tell me the name, symbol, and total supply"
 ```
 
-The agent runs in read-only Q&A mode and only calls Hedera Agent Kit query
-tools (`get_hbar_balance_query_tool`, `get_account_query_tool`,
-`get_topic_messages_query_tool`, `get_token_info_query_tool`,
-`get_transaction_record_query_tool`, `get_exchange_rate_tool`, ...). Write
-actions (postcard, register, mint, tip, NFT) only fire on the deterministic
-command paths above, so the same command keeps producing the same on-chain
-receipt regardless of the LLM provider.
-
-The tip command accepts a published alias, a local fallback alias, or a raw
-`0.0.x` account id.
+Free-form input is filtered to read-only Hedera Agent Kit `get_*` tools
+(`get_hbar_balance_query_tool`, `get_topic_messages_query_tool`,
+`get_token_info_query_tool`, `get_transaction_record_query_tool`,
+`get_exchange_rate_tool`, ...). The LLM never sees a write tool, so a Q&A
+question can never spend HBAR or mint an NFT.
 
 ## Address Book
 
-HashTrail uses three recipient layers:
-
-- **Local registry:** `recipients.json`, gitignored and useful for bootstrap.
-- **Generated demo account:** `recipients create <alias>` creates a Hedera
-  account and stores the private key under `.local/recipients/`.
-- **Public registry:** `recipients publish <alias>` writes a
-  `hashtrail.address-book.v1` receipt to HCS.
-
-The tip flow checks HCS address-book receipts first, then local
-`recipients.json`. That keeps the public demo inspectable while preserving a
-local fallback for setup.
+HashTrail resolves a recipient alias in this order: HCS address-book receipts
+first (public, inspectable), then local `recipients.json` (gitignored, useful
+for bootstrap). `recipients create <alias>` generates a Hedera account and
+stores the private key under `.local/recipients/`. `recipients publish <alias>`
+writes a `hashtrail.address-book.v1` receipt to HCS so other operators can
+resolve the same alias from the public log.
 
 ## Tip Card NFT
 
 The canonical Tip Card asset is
-[`assets/tip-card/tip-card-v1.svg`](assets/tip-card/tip-card-v1.svg).
-
-For wallet and marketplace rendering, mint with a public HIP-412 metadata URI:
+[`assets/tip-card/tip-card-v1.svg`](assets/tip-card/tip-card-v1.svg). For
+wallet and marketplace rendering, mint with a public HIP-412 metadata URI:
 
 ```dotenv
 HASHTRAIL_TIP_CARD_METADATA_URI=ipfs://REPLACE_WITH_METADATA_CID
 ```
 
-Available metadata files:
+Three metadata variants live under `assets/tip-card/`. For production-style
+cards, prefer
+[`metadata.hip412.svg-default.json`](assets/tip-card/metadata.hip412.svg-default.json):
+the generic SVG is the default wallet image, so the visible NFT shows
+`HBAR TIP`, `HCS RECEIPT`, `HTS NFT`, and `HASHSCAN PROOF` without binding the
+art to a single amount or recipient.
 
-- [`assets/tip-card/metadata.hip412.example.json`](assets/tip-card/metadata.hip412.example.json)
-- [`assets/tip-card/metadata.hip412.json`](assets/tip-card/metadata.hip412.json)
-- [`assets/tip-card/metadata.hip412.svg-default.json`](assets/tip-card/metadata.hip412.svg-default.json)
-
-For production-style cards, prefer
-`metadata.hip412.svg-default.json`. It uses the generic SVG as the default
-wallet image, so the visible NFT says `HBAR TIP`, `HCS RECEIPT`, `HTS NFT`, and
-`HASHSCAN PROOF` without binding the art to a single amount or recipient.
+If a recipient cannot accept the NFT, the HBAR tip can still complete and the
+HCS receipt records the NFT outcome and reason.
 
 ## Safety Model
 
-HashTrail is intentionally narrow and guarded:
-
-- Mainnet requires `HASHTRAIL_ENABLE_MAINNET=true`.
-- Minting requires `WEEK1_ALLOW_MINT=true`.
-- HBAR tipping requires `WEEK1_ALLOW_TIP=true`.
-- Tip Card NFT mint/transfer requires `WEEK1_ALLOW_TIP_NFT=true`.
-- HBAR transfer-capable Agent Kit tools are capped at 1 HBAR.
+- Mainnet writes require `HASHTRAIL_ENABLE_MAINNET=true` plus the matching
+  `WEEK1_ALLOW_*` flag for each action (`MINT`, `TIP`, `TIP_NFT`).
+- Agent Kit HBAR transfer tools are capped at 1 HBAR per call.
 - NFT metadata URIs must be `ipfs://`, `ar://`, or `https://` and fit Hedera's
   100-byte serial metadata limit.
-- Readback commands reuse pinned topic/token IDs instead of creating new objects.
-- Free-form Q&A only exposes Hedera Agent Kit `get_*` query tools to the LLM.
-  Write actions (postcard, register, mint, tip, NFT) only fire on the
-  deterministic command paths, so the LLM cannot bypass the policy gates.
+- Free-form Q&A only ever sees read-only Agent Kit `get_*` tools.
+- Readback commands reuse pinned topic/token IDs instead of creating new
+  objects.
 - Secrets and generated keys are gitignored.
-
-If a recipient cannot accept the NFT, the HBAR tip can still complete. HashTrail
-records the NFT outcome and reason in the HCS receipt.
 
 ## Verification
 
@@ -459,8 +283,31 @@ npm run build
 npm run secrets:scan
 ```
 
-The live transcript and reviewer-facing artifacts are in
-[`submission/`](submission/):
+Reviewer-facing artifacts:
 
 - [`submission/demo-testnet-transcript.md`](submission/demo-testnet-transcript.md)
 - [`submission/mainnet-readiness.md`](submission/mainnet-readiness.md)
+
+## Releases
+
+See [`CHANGELOG.md`](CHANGELOG.md) for the version history. Tagged releases
+live on [GitHub](https://github.com/Hebx/hashtrail-hedera-agent/releases).
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+1. Fork and create a feature branch off `main`.
+2. Run `npm run typecheck && npm run lint && npm test -- --run && npm run build && npm run secrets:scan` before opening a PR.
+3. Use [Conventional Commits](https://www.conventionalcommits.org/) for commit
+   subjects (`feat:`, `fix:`, `docs:`, `ci:`, etc.).
+4. For changes that affect on-chain behavior, include a short note about which
+   policy gate (or test) covers the new path.
+
+CI runs typecheck, lint, vitest, and gitleaks on every PR (Node 20 and 22).
+Secrets must never land in commits — use `.env.example` for shape and keep
+real values in `.env`, which is gitignored.
+
+## License
+
+[MIT](LICENSE) © Ihab Heb (Hebx)
