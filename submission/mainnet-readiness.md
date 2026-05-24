@@ -126,6 +126,19 @@ WEEK1_ALLOW_TIP=true
 WEEK1_ALLOW_TIP_NFT=true
 ```
 
+**Why `HBL_LLM_PROVIDER=none` is the safe default for mainnet runs.**
+The deterministic regex parser still handles every write command (`tip`,
+`register`, `mint`, `make me a hashtrail postcard`, `check my balance`). The
+router only falls through to the Gemini-backed free-form Q&A path when an LLM
+provider is set, and that path is filtered to read-only Agent Kit `get_*`
+tools, so even if you do enable `HBL_LLM_PROVIDER=gemini` later for
+mainnet-state Q&A (e.g. "what is the topic id of the last receipt"), the LLM
+cannot send HBAR, mint NFTs, or write HCS messages. Writes only flow through
+the deterministic command paths and the policy gates above.
+
+For first-run mainnet: keep `HBL_LLM_PROVIDER=none` until the deterministic
+demo is verified, then optionally flip to `gemini` for read-only Q&A.
+
 For serial 7, upload:
 
 ```text

@@ -1,6 +1,6 @@
 {
   "name": "hashtrail-hedera-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Hedera receipt agent for verifiable contributor rewards.",
   "type": "module",
   "private": false,
